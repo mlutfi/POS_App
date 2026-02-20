@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"pos_backend/entity"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -47,6 +48,22 @@ func NewDatabase(viper *viper.Viper, log *logrus.Logger) *gorm.DB {
 	connection.SetMaxIdleConns(idleConnection)
 	connection.SetMaxOpenConns(maxConnection)
 	connection.SetConnMaxLifetime(time.Second * time.Duration(maxLifeTimeConnection))
+
+	// Auto migrate tables
+	err = db.AutoMigrate(
+		&entity.User{},
+		&entity.Category{},
+		&entity.Product{},
+		&entity.Inventory{},
+		&entity.Sale{},
+		&entity.SaleItem{},
+		&entity.Payment{},
+		&entity.StockMovement{},
+		&entity.ReceiptTemplate{},
+	)
+	if err != nil {
+		log.Fatalf("failed to migrate database: %v", err)
+	}
 
 	return db
 }

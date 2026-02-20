@@ -44,8 +44,8 @@ export default function AdminDashboard() {
         setStats({
           totalRevenue: report.totalRevenue,
           totalSales: report.totalSales,
-          totalProducts: products.length,
-          totalCategories: categories.length,
+          totalProducts: (products ?? []).length,
+          totalCategories: (categories ?? []).length,
           cashSales: report.cashSales,
           qrisSales: report.qrisSales,
         })
@@ -134,9 +134,8 @@ export default function AdminDashboard() {
                 </div>
                 {stat.trend && (
                   <span
-                    className={`flex items-center gap-1 text-xs font-medium ${
-                      stat.trendUp ? "text-green-600" : "text-red-600"
-                    }`}
+                    className={`flex items-center gap-1 text-xs font-medium ${stat.trendUp ? "text-green-600" : "text-red-600"
+                      }`}
                   >
                     {stat.trendUp ? (
                       <TrendingUp className="h-3 w-3" />
@@ -192,21 +191,19 @@ export default function AdminDashboard() {
             <div
               className="bg-green-500 transition-all"
               style={{
-                width: `${
-                  stats.totalSales > 0
+                width: `${stats.totalSales > 0
                     ? (stats.cashSales / stats.totalSales) * 100
                     : 0
-                }%`,
+                  }%`,
               }}
             />
             <div
               className="bg-purple-500 transition-all"
               style={{
-                width: `${
-                  stats.totalSales > 0
+                width: `${stats.totalSales > 0
                     ? (stats.qrisSales / stats.totalSales) * 100
                     : 0
-                }%`,
+                  }%`,
               }}
             />
           </div>

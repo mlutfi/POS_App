@@ -20,7 +20,7 @@ export default function CategoriesAdminPage() {
   async function fetchData() {
     try {
       const data = await categoriesApi.getAll()
-      setCategories(data)
+      setCategories(data ?? [])
     } catch (error) {
       toast({
         title: "Error",

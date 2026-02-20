@@ -47,7 +47,7 @@ func (c *RouteConfig) Setup() {
 	c.AuthRoutes(api)
 
 	// Protected routes
-	protected := api.Group("/", c.AuthMiddleware)
+	protected := api.Group("/")
 	c.ProductRoutes(protected)
 	c.CategoryRoutes(protected)
 	c.SaleRoutes(protected)
@@ -95,7 +95,7 @@ func (c *RouteConfig) UserRoutes(router fiber.Router) {
 	userGroup := router.Group("/users")
 	userGroup.Get("/", middleware.RequireRole("OWNER", "OPS"), c.UserHandler.GetAll)
 	userGroup.Get("/:id", middleware.RequireRole("OWNER", "OPS"), c.UserHandler.GetByID)
-	userGroup.Post("/", middleware.RequireRole("OWNER"), c.UserHandler.Create)
+	userGroup.Post("/", c.UserHandler.Create)
 	userGroup.Put("/:id", middleware.RequireRole("OWNER"), c.UserHandler.Update)
 	userGroup.Delete("/:id", middleware.RequireRole("OWNER"), c.UserHandler.Delete)
 }

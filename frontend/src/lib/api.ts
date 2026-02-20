@@ -96,6 +96,7 @@ export interface Sale {
 export const authApi = {
   login: async (email: string, password: string): Promise<LoginResponse> => {
     const response = await api.post('/auth/login', { email, password })
+    console.log('Login response:', response.data);
     return response.data.data
   },
   
@@ -117,7 +118,7 @@ export const authApi = {
 export const productsApi = {
   getAll: async (): Promise<Product[]> => {
     const response = await api.get('/products')
-    return response.data.data
+    return response.data.data ?? []
   },
   
   getById: async (id: string): Promise<Product> => {
@@ -127,12 +128,12 @@ export const productsApi = {
   
   search: async (query: string): Promise<Product[]> => {
     const response = await api.get(`/products/search?q=${encodeURIComponent(query)}`)
-    return response.data.data
+    return response.data.data ?? []
   },
   
   getByCategory: async (categoryId: string): Promise<Product[]> => {
     const response = await api.get(`/products/by-category?categoryId=${categoryId}`)
-    return response.data.data
+    return response.data.data ?? []
   },
   
   create: async (data: Partial<Product>): Promise<Product> => {
@@ -154,7 +155,7 @@ export const productsApi = {
 export const categoriesApi = {
   getAll: async (): Promise<Category[]> => {
     const response = await api.get('/categories')
-    return response.data.data
+    return response.data.data ?? []
   },
   
   create: async (name: string): Promise<Category> => {

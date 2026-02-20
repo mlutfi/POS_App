@@ -42,8 +42,8 @@ export default function ProductsAdminPage() {
         productsApi.getAll(),
         categoriesApi.getAll(),
       ])
-      setProducts(productsData)
-      setCategories(categoriesData)
+      setProducts(productsData ?? [])
+      setCategories(categoriesData ?? [])
     } catch (error) {
       toast({
         title: "Error",
@@ -260,11 +260,10 @@ export default function ProductsAdminPage() {
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                        product.isActive
+                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${product.isActive
                           ? "bg-green-100 text-green-700"
                           : "bg-red-100 text-red-700"
-                      }`}
+                        }`}
                     >
                       {product.isActive ? "Aktif" : "Nonaktif"}
                     </span>

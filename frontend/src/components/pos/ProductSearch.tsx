@@ -15,7 +15,7 @@ export function ProductSearch({ onSelect, categoryId }: ProductSearchProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   const debouncedQuery = useDebounce(query, 300)
 
   const fetchProducts = useCallback(async () => {
@@ -30,7 +30,7 @@ export function ProductSearch({ onSelect, categoryId }: ProductSearchProps) {
       } else {
         data = await productsApi.getAll()
       }
-      setProducts(data.filter(p => p.isActive))
+      setProducts((data ?? []).filter(p => p.isActive))
     } catch (err: any) {
       setError(err.response?.data?.message || "Gagal memuat produk")
     } finally {

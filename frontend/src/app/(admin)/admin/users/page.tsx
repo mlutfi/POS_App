@@ -34,7 +34,7 @@ export default function UsersAdminPage() {
   async function fetchUsers() {
     try {
       const response = await api.get("/users")
-      setUsers(response.data.data)
+      setUsers(response.data.data ?? [])
     } catch (error) {
       toast({
         title: "Error",

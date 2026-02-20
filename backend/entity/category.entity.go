@@ -14,7 +14,7 @@ type Category struct {
 	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at;index" json:"-"`
 
 	// Relations
-	Products []Product `gorm:"foreignKey:CategoryID;constraint:OnDelete:SetNull" json:"products,omitempty"`
+	Products []Product `gorm:"foreignKey:CategoryID;constraint:OnDelete:SET NULL" json:"products,omitempty"`
 }
 
 func (Category) TableName() string {

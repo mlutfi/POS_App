@@ -21,7 +21,7 @@ type Product struct {
 	DeletedAt  gorm.DeletedAt `gorm:"column:deleted_at;index" json:"-"`
 
 	// Relations
-	Category  *Category       `gorm:"foreignKey:CategoryID;constraint:OnDelete:SetNull" json:"category,omitempty"`
+	Category  *Category       `gorm:"foreignKey:CategoryID;constraint:OnDelete:SET NULL" json:"category,omitempty"`
 	Inventory *Inventory      `gorm:"foreignKey:ProductID;constraint:OnDelete:Cascade" json:"inventory,omitempty"`
 	SaleItems []SaleItem      `gorm:"foreignKey:ProductID;constraint:OnDelete:Restrict" json:"saleItems,omitempty"`
 	Movements []StockMovement `gorm:"foreignKey:ProductID;constraint:OnDelete:Restrict" json:"movements,omitempty"`
