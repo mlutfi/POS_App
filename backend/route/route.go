@@ -47,7 +47,7 @@ func (c *RouteConfig) Setup() {
 	c.AuthRoutes(api)
 
 	// Protected routes
-	protected := api.Group("/")
+	protected := api.Group("/", c.AuthMiddleware)
 	c.ProductRoutes(protected)
 	c.CategoryRoutes(protected)
 	c.SaleRoutes(protected)

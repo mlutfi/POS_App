@@ -3,7 +3,9 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/lib/store"
-import { AdminNavbar } from "@/components/admin/AdminNavbar"
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
+import { AppSidebar } from "@/components/admin/AppSidebar"
+import { AdminHeader } from "@/components/admin/AdminHeader"
 
 export default function AdminLayout({
   children,
@@ -34,11 +36,16 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <AdminNavbar />
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {children}
-      </main>
-    </div>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <AdminHeader />
+        <div className="flex-1 p-4 pt-0">
+          <div className="py-4">
+            {children}
+          </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
