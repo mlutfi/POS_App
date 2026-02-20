@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { salesApi, Sale } from "@/lib/api"
 import { useToast } from "@/components/ui/use-toast"
-import { Banknote, QrCode, Loader2, CheckCircle, XCircle } from "lucide-react"
+import { Banknote, QrCode, Loader2, CheckCircle, XCircle, Sparkles, ArrowRight } from "lucide-react"
 
 interface CartItem {
   productId: string
@@ -118,7 +118,6 @@ export function PaymentPanel({
         title: "QRIS Generated",
         description: "Silakan scan QR code untuk pembayaran",
       })
-      // In real app, would show QR code and poll for payment status
     } catch (error: any) {
       toast({
         title: "Error",
@@ -152,22 +151,29 @@ export function PaymentPanel({
 
   const change = parseInt(cashAmount) - total
 
+  // ===== Success Screen =====
   if (showSuccess) {
     return (
-      <div className="flex flex-col items-center justify-center py-6 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-          <CheckCircle className="h-8 w-8 text-green-600" />
+      <div className="flex flex-col items-center justify-center py-6 text-center animate-scale-in">
+        <div className="relative">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-green-500 shadow-xl shadow-emerald-200/50">
+            <CheckCircle className="h-10 w-10 text-white" />
+          </div>
+          <div className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 animate-bounce shadow-sm">
+            <Sparkles className="h-3 w-3 text-white" />
+          </div>
         </div>
-        <h3 className="mt-4 text-lg font-semibold text-slate-900">Pembayaran Berhasil</h3>
-        <p className="mt-1 text-sm text-slate-500">Transaksi telah selesai</p>
+        <h3 className="mt-5 text-lg font-bold text-slate-800">Pembayaran Berhasil!</h3>
+        <p className="mt-1 text-sm text-slate-400">Transaksi telah selesai</p>
         {change > 0 && (
-          <div className="mt-4 rounded-lg bg-amber-50 px-4 py-2">
-            <p className="text-sm text-amber-800">Kembalian: {formatPrice(change)}</p>
+          <div className="mt-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 px-5 py-3 animate-fade-in">
+            <p className="text-xs text-amber-600 font-medium">Kembalian</p>
+            <p className="text-lg font-bold text-gradient">{formatPrice(change)}</p>
           </div>
         )}
         <button
           onClick={handleReset}
-          className="mt-6 w-full rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+          className="mt-6 w-full rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 py-3 text-sm font-bold text-white shadow-lg shadow-amber-200/50 transition-all duration-200 hover:shadow-xl hover:shadow-amber-200/60 hover:scale-[1.02] active:scale-[0.98]"
         >
           Transaksi Baru
         </button>
@@ -175,32 +181,34 @@ export function PaymentPanel({
     )
   }
 
+  // ===== Empty Cart =====
   if (cartItems.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-6 text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
-          <Banknote className="h-6 w-6 text-slate-400" />
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50">
+          <Banknote className="h-7 w-7 text-slate-300" />
         </div>
-        <p className="mt-2 text-sm text-slate-500">Tidak ada item untuk dibayar</p>
+        <p className="mt-3 text-sm text-slate-400 font-medium">Tidak ada item untuk dibayar</p>
       </div>
     )
   }
 
+  // ===== Cash Payment Flow =====
   if (paymentMethod === "cash") {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 animate-fade-in">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-900">Pembayaran Tunai</h3>
+          <h3 className="text-sm font-bold text-slate-700">Pembayaran Tunai</h3>
           <button
             onClick={() => setPaymentMethod(null)}
-            className="text-xs text-slate-500 hover:text-slate-700"
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 border border-slate-200 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-600"
           >
             <XCircle className="h-4 w-4" />
           </button>
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-700">
+          <label className="mb-2 block text-xs font-semibold text-slate-400 uppercase tracking-wider">
             Jumlah Bayar
           </label>
           <input
@@ -208,7 +216,7 @@ export function PaymentPanel({
             value={cashAmount}
             onChange={(e) => setCashAmount(e.target.value)}
             placeholder="Masukkan jumlah"
-            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-200"
+            className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4 py-3.5 text-sm text-slate-700 placeholder-slate-300 outline-none transition-all duration-200 focus:border-amber-400 focus:bg-white focus:ring-2 focus:ring-amber-100"
           />
         </div>
 
@@ -218,7 +226,7 @@ export function PaymentPanel({
             <button
               key={amount}
               onClick={() => setCashAmount(amount.toString())}
-              className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+              className="rounded-full bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-500 transition-all hover:bg-amber-50 hover:text-amber-700 hover:border-amber-200 active:scale-95"
             >
               {formatPrice(amount)}
             </button>
@@ -226,9 +234,10 @@ export function PaymentPanel({
         </div>
 
         {parseInt(cashAmount) >= total && (
-          <div className="rounded-lg bg-green-50 px-4 py-2">
-            <p className="text-sm text-green-800">
-              Kembalian: {formatPrice(change)}
+          <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 animate-fade-in">
+            <p className="text-xs text-emerald-500 font-medium">Kembalian</p>
+            <p className="text-sm font-bold text-emerald-700">
+              {formatPrice(change)}
             </p>
           </div>
         )}
@@ -236,45 +245,50 @@ export function PaymentPanel({
         <button
           onClick={handleCashPayment}
           disabled={loading || parseInt(cashAmount) < total}
-          className="w-full rounded-xl bg-green-600 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-200/50 transition-all duration-200 hover:shadow-xl hover:shadow-emerald-200/60 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:shadow-none disabled:hover:scale-100"
         >
           {loading ? (
-            <span className="flex items-center justify-center gap-2">
+            <>
               <Loader2 className="h-4 w-4 animate-spin" />
               Memproses...
-            </span>
+            </>
           ) : (
-            "Bayar"
+            <>
+              <Banknote className="h-4 w-4" />
+              Bayar Sekarang
+              <ArrowRight className="h-4 w-4" />
+            </>
           )}
         </button>
       </div>
     )
   }
 
+  // ===== QRIS Payment Flow =====
   if (paymentMethod === "qris") {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 animate-fade-in">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-900">Pembayaran QRIS</h3>
+          <h3 className="text-sm font-bold text-slate-700">Pembayaran QRIS</h3>
           <button
             onClick={() => setPaymentMethod(null)}
-            className="text-xs text-slate-500 hover:text-slate-700"
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 border border-slate-200 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-600"
           >
             <XCircle className="h-4 w-4" />
           </button>
         </div>
 
         <div className="flex flex-col items-center justify-center py-4">
-          <div className="flex h-32 w-32 items-center justify-center rounded-lg bg-slate-100">
-            <QrCode className="h-16 w-16 text-slate-400" />
+          <div className="flex h-36 w-36 items-center justify-center rounded-2xl bg-slate-50 border border-slate-200 animate-pulse-glow">
+            <QrCode className="h-20 w-20 text-slate-300" />
           </div>
-          <p className="mt-3 text-sm text-slate-500">Scan QR code untuk membayar</p>
-          <p className="text-lg font-bold text-slate-900">{formatPrice(total)}</p>
+          <p className="mt-4 text-sm text-slate-400 font-medium">Scan QR code untuk membayar</p>
+          <p className="mt-1 text-xl font-extrabold text-gradient">{formatPrice(total)}</p>
         </div>
 
         <button
           onClick={handleReset}
-          className="w-full rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          className="w-full rounded-xl bg-white border border-slate-200 py-3 text-sm font-semibold text-slate-500 transition-all hover:bg-red-50 hover:text-red-600 hover:border-red-200"
         >
           Batalkan
         </button>
@@ -282,28 +296,33 @@ export function PaymentPanel({
     )
   }
 
+  // ===== Payment Method Selection =====
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 animate-fade-in">
       <div className="grid grid-cols-2 gap-3">
         <button
           onClick={() => handleStartPayment("cash")}
-          className="flex flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-4 transition hover:border-amber-300 hover:bg-amber-50"
+          className="group flex flex-col items-center justify-center gap-3 rounded-2xl bg-white border border-slate-100 py-5 transition-all duration-200 hover:bg-gradient-to-br hover:from-amber-50 hover:to-orange-50 hover:border-amber-200 hover:shadow-lg hover:shadow-amber-100/40 hover:scale-[1.02] active:scale-[0.98]"
         >
-          <Banknote className="h-6 w-6 text-amber-600" />
-          <span className="text-sm font-medium text-slate-900">Tunai</span>
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-200/40 transition-transform group-hover:scale-110">
+            <Banknote className="h-6 w-6 text-white" />
+          </div>
+          <span className="text-sm font-bold text-slate-600 group-hover:text-amber-700">Tunai</span>
         </button>
         <button
           onClick={() => handleStartPayment("qris")}
-          className="flex flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-4 transition hover:border-purple-300 hover:bg-purple-50"
+          className="group flex flex-col items-center justify-center gap-3 rounded-2xl bg-white border border-slate-100 py-5 transition-all duration-200 hover:bg-gradient-to-br hover:from-violet-50 hover:to-purple-50 hover:border-violet-200 hover:shadow-lg hover:shadow-violet-100/40 hover:scale-[1.02] active:scale-[0.98]"
         >
-          <QrCode className="h-6 w-6 text-purple-600" />
-          <span className="text-sm font-medium text-slate-900">QRIS</span>
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-400 to-purple-500 shadow-lg shadow-violet-200/40 transition-transform group-hover:scale-110">
+            <QrCode className="h-6 w-6 text-white" />
+          </div>
+          <span className="text-sm font-bold text-slate-600 group-hover:text-violet-700">QRIS</span>
         </button>
       </div>
 
       <button
         onClick={onClear}
-        className="w-full rounded-xl border border-red-200 bg-white py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+        className="w-full rounded-xl bg-white border border-slate-200 py-2.5 text-sm font-semibold text-slate-400 transition-all hover:bg-red-50 hover:text-red-600 hover:border-red-200 active:scale-[0.98]"
       >
         Batalkan Transaksi
       </button>

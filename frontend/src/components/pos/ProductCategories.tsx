@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { categoriesApi, Category } from "@/lib/api"
-import { Grid, Loader2 } from "lucide-react"
+import { Grid, Loader2, Sparkles } from "lucide-react"
 
 interface ProductCategoriesProps {
   activeCategory: string | null
@@ -29,35 +29,36 @@ export function ProductCategories({ activeCategory, onSelect }: ProductCategorie
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2">
-        <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
-        <span className="text-sm text-slate-500">Memuat kategori...</span>
+      <div className="flex items-center gap-2 py-2">
+        <Loader2 className="h-4 w-4 animate-spin text-amber-500" />
+        <span className="text-sm text-slate-400">Memuat kategori...</span>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
       <button
         onClick={() => onSelect(null)}
-        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${activeCategory === null
-            ? "bg-slate-900 text-white"
-            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+        className={`flex-shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all duration-200 ${activeCategory === null
+            ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-200/50 scale-105"
+            : "bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-slate-700 active:scale-95"
           }`}
       >
         <span className="flex items-center gap-1.5">
-          <Grid className="h-3 w-3" />
+          <Sparkles className="h-3 w-3" />
           Semua
         </span>
       </button>
-      {categories.map((category) => (
+      {categories.map((category, index) => (
         <button
           key={category.id}
           onClick={() => onSelect(category.id)}
-          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${activeCategory === category.id
-              ? "bg-slate-900 text-white"
-              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+          className={`flex-shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all duration-200 animate-fade-in ${activeCategory === category.id
+              ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-200/50 scale-105"
+              : "bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-slate-700 active:scale-95"
             }`}
+          style={{ animationDelay: `${index * 50}ms` }}
         >
           {category.name}
         </button>
