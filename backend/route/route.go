@@ -42,6 +42,9 @@ func (c *RouteConfig) Setup() {
 		return ctx.JSON(fiber.Map{"status": "ok"})
 	})
 
+	// Static files for uploads
+	c.App.Static("/uploads", "./uploads")
+
 	// API routes
 	api := c.App.Group("/api")
 
@@ -72,6 +75,7 @@ func (c *RouteConfig) ProductRoutes(router fiber.Router) {
 	productGroup.Get("/by-category", c.ProductHandler.GetByCategory)
 	productGroup.Get("/:id", c.ProductHandler.GetByID)
 	productGroup.Post("/", middleware.RequireRole("OWNER", "OPS"), c.ProductHandler.Create)
+	productGroup.Post("/upload-image", middleware.RequireRole("OWNER", "OPS"), c.ProductHandler.UploadImage)
 	productGroup.Put("/:id", middleware.RequireRole("OWNER", "OPS"), c.ProductHandler.Update)
 	productGroup.Delete("/:id", middleware.RequireRole("OWNER"), c.ProductHandler.Delete)
 }
@@ -88,10 +92,10 @@ func (c *RouteConfig) CategoryRoutes(router fiber.Router) {
 func (c *RouteConfig) SaleRoutes(router fiber.Router) {
 	saleGroup := router.Group("/sales")
 	saleGroup.Post("/", c.SaleHandler.Create)
+	saleGroup.Get("/daily-report", c.SaleHandler.GetDailyReport)
 	saleGroup.Get("/:id", c.SaleHandler.GetByID)
 	saleGroup.Post("/:id/pay-cash", c.SaleHandler.PayCash)
 	saleGroup.Post("/:id/pay-qris", c.SaleHandler.PayQRIS)
-	saleGroup.Get("/daily-report", c.SaleHandler.GetDailyReport)
 }
 
 func (c *RouteConfig) UserRoutes(router fiber.Router) {

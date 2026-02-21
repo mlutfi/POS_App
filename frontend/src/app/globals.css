@@ -228,3 +228,34 @@
     border-radius: 999px;
   }
 }
+
+/* ===== Print Styles for Receipt ===== */
+@media print {
+  /* Hide everything */
+  body > * {
+    display: none !important;
+  }
+
+  /* Show only the receipt modal */
+  body > *:has(.receipt-print-area) {
+    display: block !important;
+  }
+
+  .receipt-print-area {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 80mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: white !important;
+  }
+
+  @page {
+    size: 80mm auto;
+    margin: 2mm;
+  }
+}

@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { usePathname } from "next/navigation"
 import { salesApi, productsApi, categoriesApi } from "@/lib/api"
 import {
   DollarSign,
@@ -10,6 +11,7 @@ import {
   TrendingUp,
   TrendingDown,
   ArrowUpRight,
+  RefreshCw,
 } from "lucide-react"
 
 interface DashboardStats {
@@ -31,32 +33,43 @@ export default function AdminDashboard() {
     qrisSales: 0,
   })
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const pathname = usePathname()
+
+  const fetchStats = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true)
+    else setLoading(true)
+
+    try {
+      const [report, products, categories] = await Promise.all([
+        salesApi.getDailyReport(),
+        productsApi.getAll(),
+        categoriesApi.getAll(),
+      ])
+
+      console.log("DASHBOARD DATA:", { report, products, categories });
+
+      setStats({
+        totalRevenue: report.totalRevenue,
+        totalSales: report.totalSales,
+        totalProducts: (products ?? []).length,
+        totalCategories: (categories ?? []).length,
+        cashSales: report.cashSales,
+        qrisSales: report.qrisSales,
+      })
+    } catch (error) {
+      console.error("Failed to fetch stats:", error)
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }, [])
 
   useEffect(() => {
-    async function fetchStats() {
-      try {
-        const [report, products, categories] = await Promise.all([
-          salesApi.getDailyReport(),
-          productsApi.getAll(),
-          categoriesApi.getAll(),
-        ])
-
-        setStats({
-          totalRevenue: report.totalRevenue,
-          totalSales: report.totalSales,
-          totalProducts: (products ?? []).length,
-          totalCategories: (categories ?? []).length,
-          cashSales: report.cashSales,
-          qrisSales: report.qrisSales,
-        })
-      } catch (error) {
-        console.error("Failed to fetch stats:", error)
-      } finally {
-        setLoading(false)
-      }
+    if (pathname === '/admin') {
+      fetchStats()
     }
-    fetchStats()
-  }, [])
+  }, [pathname, fetchStats])
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -112,11 +125,21 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-sm text-slate-500">
-          Ringkasan aktivitas bisnis Anda hari ini
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+          <p className="text-sm text-slate-500">
+            Ringkasan aktivitas bisnis Anda hari ini
+          </p>
+        </div>
+        <button
+          onClick={() => fetchStats(true)}
+          disabled={refreshing}
+          className="flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-900 shadow-sm disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+          {refreshing ? "Memperbarui..." : "Refresh"}
+        </button>
       </div>
 
       {/* Stats Grid */}

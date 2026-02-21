@@ -14,6 +14,7 @@ type ProductHandler interface {
 	Delete(ctx *fiber.Ctx) error
 	Search(ctx *fiber.Ctx) error
 	GetByCategory(ctx *fiber.Ctx) error
+	UploadImage(ctx *fiber.Ctx) error
 }
 
 type productHandler struct {
@@ -93,4 +94,30 @@ func (h *productHandler) GetByCategory(ctx *fiber.Ctx) error {
 		return helper.InternalServerErrorResponse(ctx, err.Error())
 	}
 	return helper.SuccessResponse(ctx, products)
+}
+
+func (h *productHandler) UploadImage(ctx *fiber.Ctx) error {
+	file, err := ctx.FormFile("image")
+	if err != nil {
+		return helper.BadRequestResponse(ctx, "Failed to get image file from request")
+	}
+
+	// create uploads/products directory if it doesn't exist
+	_ = helper.CreateDirIfNotExists("./uploads/products")
+
+	// generate safe filename
+	filename := helper.GenerateSafeFilename(file.Filename)
+	filePath := "./uploads/products/" + filename
+
+	if err := ctx.SaveFile(file, filePath); err != nil {
+		return helper.InternalServerErrorResponse(ctx, "Failed to save image file")
+	}
+
+	// Assuming the app is accessible on root /
+	// return URL path accessible from frontend
+	imageUrl := "/uploads/products/" + filename
+
+	return helper.SuccessResponse(ctx, fiber.Map{
+		"imageUrl": imageUrl,
+	})
 }

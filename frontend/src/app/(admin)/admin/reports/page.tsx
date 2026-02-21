@@ -27,6 +27,7 @@ import {
     CreditCard,
     Banknote,
     Calendar as CalendarIcon,
+    X,
 } from "lucide-react"
 
 export default function ReportsAdminPage() {
@@ -45,6 +46,9 @@ export default function ReportsAdminPage() {
     const [summary, setSummary] = useState<ReportSummary | null>(null)
     const [chartData, setChartData] = useState<DailyChartPoint[]>([])
     const [sales, setSales] = useState<SaleDetail[]>([])
+
+    // New state for modal
+    const [selectedSale, setSelectedSale] = useState<SaleDetail | null>(null)
 
     useEffect(() => {
         fetchCashiers()
@@ -389,7 +393,11 @@ export default function ReportsAdminPage() {
                                 <tbody className="divide-y divide-slate-100/80">
                                     {sales.length > 0 ? (
                                         sales.map((sale) => (
-                                            <tr key={sale.id} className="hover:bg-slate-50/50">
+                                            <tr
+                                                key={sale.id}
+                                                className="hover:bg-slate-50/50 cursor-pointer"
+                                                onClick={() => setSelectedSale(sale)}
+                                            >
                                                 <td className="px-5 py-3 text-slate-600 whitespace-nowrap">
                                                     {formatDate(sale.createdAt)}
                                                 </td>
@@ -401,10 +409,10 @@ export default function ReportsAdminPage() {
                                                 </td>
                                                 <td className="px-5 py-3">
                                                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${sale.paymentMethod === 'CASH'
-                                                            ? 'bg-green-100 text-green-700'
-                                                            : sale.paymentMethod === 'QRIS'
-                                                                ? 'bg-purple-100 text-purple-700'
-                                                                : 'bg-slate-100 text-slate-700'
+                                                        ? 'bg-green-100 text-green-700'
+                                                        : sale.paymentMethod === 'QRIS'
+                                                            ? 'bg-purple-100 text-purple-700'
+                                                            : 'bg-slate-100 text-slate-700'
                                                         }`}>
                                                         {sale.paymentMethod}
                                                     </span>
@@ -428,6 +436,94 @@ export default function ReportsAdminPage() {
                             </table>
                         </div>
                     </div>
+
+                    {/* Sales Detail Modal */}
+                    {selectedSale && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+                            <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl flex flex-col max-h-[90vh]">
+                                <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+                                    <div>
+                                        <h2 className="text-lg font-bold text-slate-900">Detail Transaksi</h2>
+                                        <p className="text-sm font-mono text-slate-500 mt-1">{selectedSale.id}</p>
+                                    </div>
+                                    <button
+                                        onClick={() => setSelectedSale(null)}
+                                        className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+                                    >
+                                        <X className="h-5 w-5" />
+                                    </button>
+                                </div>
+
+                                <div className="overflow-y-auto p-6 flex-1">
+                                    <div className="grid grid-cols-2 gap-4 mb-6">
+                                        <div className="rounded-xl bg-slate-50 p-4 border border-slate-100">
+                                            <p className="text-xs font-medium text-slate-500 mb-1">Tanggal</p>
+                                            <p className="text-sm font-semibold text-slate-900">{formatDate(selectedSale.createdAt)}</p>
+                                        </div>
+                                        <div className="rounded-xl bg-slate-50 p-4 border border-slate-100">
+                                            <p className="text-xs font-medium text-slate-500 mb-1">Kasir</p>
+                                            <p className="text-sm font-semibold text-slate-900">{selectedSale.cashierName}</p>
+                                        </div>
+                                        <div className="rounded-xl bg-slate-50 p-4 border border-slate-100">
+                                            <p className="text-xs font-medium text-slate-500 mb-1">Metode</p>
+                                            <p className="text-sm font-semibold text-slate-900">{selectedSale.paymentMethod}</p>
+                                        </div>
+                                        <div className="rounded-xl bg-slate-50 p-4 border border-slate-100">
+                                            <p className="text-xs font-medium text-slate-500 mb-1">Total Item</p>
+                                            <p className="text-sm font-semibold text-slate-900">{selectedSale.itemCount} Item</p>
+                                        </div>
+                                    </div>
+
+                                    <h3 className="text-sm font-bold text-slate-900 mb-3">Rincian Produk</h3>
+                                    <div className="rounded-xl border border-slate-200 overflow-hidden">
+                                        <table className="w-full text-left text-sm">
+                                            <thead className="bg-slate-50 text-xs uppercase text-slate-500 border-b border-slate-200">
+                                                <tr>
+                                                    <th className="px-4 py-3 font-medium">Produk</th>
+                                                    <th className="px-4 py-3 font-medium text-center">Harga</th>
+                                                    <th className="px-4 py-3 font-medium text-center">Qty</th>
+                                                    <th className="px-4 py-3 font-medium text-right">Subtotal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {selectedSale.items && selectedSale.items.length > 0 ? (
+                                                    selectedSale.items.map((item, index) => (
+                                                        <tr key={index} className="hover:bg-slate-50/50">
+                                                            <td className="px-4 py-3 font-medium text-slate-900">{item.productName}</td>
+                                                            <td className="px-4 py-3 text-center text-slate-600">{formatPrice(item.price)}</td>
+                                                            <td className="px-4 py-3 text-center font-semibold text-slate-900">{item.quantity}</td>
+                                                            <td className="px-4 py-3 text-right font-semibold text-slate-900">{formatPrice(item.subtotal)}</td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan={4} className="px-4 py-6 text-center text-slate-500 italic">
+                                                            Rincian produk tidak tersedia.
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                            <tfoot className="bg-slate-50 border-t border-slate-200">
+                                                <tr>
+                                                    <td colSpan={3} className="px-4 py-4 text-right font-bold text-slate-700">Total Belanja:</td>
+                                                    <td className="px-4 py-4 text-right font-bold text-slate-900 text-lg">{formatPrice(selectedSale.total)}</td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div className="border-t border-slate-100 p-4 bg-slate-50 rounded-b-2xl flex justify-end">
+                                    <button
+                                        onClick={() => setSelectedSale(null)}
+                                        className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium rounded-xl transition-colors"
+                                    >
+                                        Tutup
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </>
             ) : null}
         </div>

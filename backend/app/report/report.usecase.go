@@ -88,6 +88,20 @@ func (u *reportUseCase) GetSalesDetail(ctx context.Context, filter *ReportFilter
 			}
 		}
 
+		var saleItems []SaleItemResponse
+		for _, item := range sale.Items {
+			productName := "Unknown Product"
+			if item.Product != nil {
+				productName = item.Product.Name
+			}
+			saleItems = append(saleItems, SaleItemResponse{
+				ProductName: productName,
+				Quantity:    item.Qty,
+				Price:       item.Price,
+				Subtotal:    item.Subtotal,
+			})
+		}
+
 		details = append(details, SaleDetailResponse{
 			ID:            sale.ID,
 			CashierName:   cashierName,
@@ -95,6 +109,7 @@ func (u *reportUseCase) GetSalesDetail(ctx context.Context, filter *ReportFilter
 			Total:         sale.Total,
 			PaymentMethod: paymentMethod,
 			ItemCount:     len(sale.Items),
+			Items:         saleItems,
 			CreatedAt:     sale.CreatedAt.Format(time.RFC3339),
 		})
 	}

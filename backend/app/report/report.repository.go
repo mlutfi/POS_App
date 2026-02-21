@@ -42,6 +42,7 @@ func (r *reportRepository) GetFilteredSales(ctx context.Context, filter *ReportF
 	query := r.DB.WithContext(ctx).
 		Preload("Cashier").
 		Preload("Items").
+		Preload("Items.Product").
 		Preload("Payments").
 		Where("sales.status = ?", entity.SaleStatusPaid)
 

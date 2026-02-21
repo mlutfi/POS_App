@@ -11,7 +11,23 @@ import {
   Package,
   MoreVertical,
   X,
+  Upload,
+  Image as ImageIcon,
 } from "lucide-react";
+
+// Helper to resolve image URL with backend base
+const getImageUrl = (url?: string | null) => {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+
+  // Get base URL from env or fallback, removing /api suffix if present
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  const baseUrl = apiBase.replace('/api', '');
+
+  // Ensure url starts with /
+  const path = url.startsWith("/") ? url : `/${url}`;
+  return `${baseUrl}${path}`;
+};
 
 export default function ProductsAdminPage() {
   const { toast } = useToast();
@@ -30,7 +46,11 @@ export default function ProductsAdminPage() {
     cost: "",
     qtyOnHand: "",
     isActive: true,
+    imageUrl: "",
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -81,7 +101,10 @@ export default function ProductsAdminPage() {
       cost: "",
       qtyOnHand: "",
       isActive: true,
+      imageUrl: "",
     });
+    setImageFile(null);
+    setImagePreview(null);
     setShowModal(true);
   }
 
@@ -96,25 +119,37 @@ export default function ProductsAdminPage() {
       cost: product.cost?.toString() || "",
       qtyOnHand: product.qtyOnHand?.toString() || "",
       isActive: product.isActive,
+      imageUrl: product.imageUrl || "",
     });
+    setImageFile(null);
+    setImagePreview(product.imageUrl || null);
     setShowModal(true);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-
-    const data = {
-      name: formData.name,
-      price: parseInt(formData.price),
-      categoryId: formData.categoryId || undefined,
-      sku: formData.sku || undefined,
-      barcode: formData.barcode || undefined,
-      cost: formData.cost ? parseInt(formData.cost) : undefined,
-      qtyOnHand: formData.qtyOnHand ? parseInt(formData.qtyOnHand) : 0,
-      isActive: formData.isActive,
-    };
+    setIsUploading(true);
 
     try {
+      let finalImageUrl = formData.imageUrl;
+
+      // Upload image if a new file is selected
+      if (imageFile) {
+        finalImageUrl = await productsApi.uploadImage(imageFile);
+      }
+
+      const data = {
+        name: formData.name,
+        price: parseInt(formData.price),
+        categoryId: formData.categoryId || undefined,
+        sku: formData.sku || undefined,
+        barcode: formData.barcode || undefined,
+        cost: formData.cost ? parseInt(formData.cost) : undefined,
+        qtyOnHand: formData.qtyOnHand ? parseInt(formData.qtyOnHand) : 0,
+        isActive: formData.isActive,
+        imageUrl: finalImageUrl || undefined,
+      };
+
       if (editingProduct) {
         await productsApi.update(editingProduct.id, data);
         toast({
@@ -136,8 +171,26 @@ export default function ProductsAdminPage() {
         description: error.response?.data?.message || "Gagal menyimpan produk",
         variant: "destructive",
       });
+    } finally {
+      setIsUploading(false);
     }
   }
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          title: "Error",
+          description: "Ukuran file maksimal 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
 
   async function handleDelete(product: Product) {
     if (!confirm(`Hapus produk "${product.name}"?`)) return;
@@ -228,12 +281,12 @@ export default function ProductsAdminPage() {
                 <tr key={product.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 overflow-hidden">
                         {product.imageUrl ? (
                           <img
-                            src={product.imageUrl}
+                            src={getImageUrl(product.imageUrl)}
                             alt={product.name}
-                            className="h-full w-full rounded-lg object-cover"
+                            className="h-full w-full object-cover"
                           />
                         ) : (
                           <Package className="h-5 w-5 text-slate-400" />
@@ -260,11 +313,10 @@ export default function ProductsAdminPage() {
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                        product.isActive
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
+                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${product.isActive
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"
+                        }`}
                     >
                       {product.isActive ? "Aktif" : "Nonaktif"}
                     </span>
@@ -316,145 +368,200 @@ export default function ProductsAdminPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Nama Produk *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">
-                    Harga *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    value={formData.price}
-                    onChange={(e) =>
-                      setFormData({ ...formData, price: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
-                  />
+              <div className="flex gap-6">
+                {/* Image Upload Column */}
+                <div className="w-1/3 space-y-4">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                      Gambar Produk
+                    </label>
+                    <div className="relative aspect-square w-full flex-col flex items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 transition-colors hover:border-slate-400 hover:bg-slate-100 group">
+                      {imagePreview ? (
+                        <>
+                          <img
+                            src={imagePreview.startsWith('blob:') ? imagePreview : getImageUrl(imagePreview)}
+                            alt="Preview"
+                            className="h-full w-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span className="text-white text-xs font-semibold px-3 py-1 bg-black/50 rounded-full">Ubah Gambar</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center p-4 text-center">
+                          <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-slate-200">
+                            <ImageIcon className="h-5 w-5 text-slate-500" />
+                          </div>
+                          <span className="text-xs font-medium text-slate-600">
+                            Pilih atau tarik gambar ke sini
+                          </span>
+                          <span className="mt-1 text-[10px] text-slate-400">
+                            JPG, PNG, WEBP (Max 5MB)
+                          </span>
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={handleImageChange}
+                        className="absolute inset-0 cursor-pointer opacity-0"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">
-                    Harga Modal
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.cost}
-                    onChange={(e) =>
-                      setFormData({ ...formData, cost: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
-                  />
-                </div>
-              </div>
 
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Kategori
-                </label>
-                <select
-                  value={formData.categoryId}
-                  onChange={(e) =>
-                    setFormData({ ...formData, categoryId: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
-                >
-                  <option value="">Pilih Kategori</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                {/* Form Fields Column */}
+                <div className="w-2/3 space-y-4">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">
+                      Nama Produk *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
+                    />
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">
-                    SKU
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.sku}
-                    onChange={(e) =>
-                      setFormData({ ...formData, sku: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">
-                    Barcode
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.barcode}
-                    onChange={(e) =>
-                      setFormData({ ...formData, barcode: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
-                  />
-                </div>
-              </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-slate-700">
+                        Harga *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min="0"
+                        value={formData.price}
+                        onChange={(e) =>
+                          setFormData({ ...formData, price: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-slate-700">
+                        Harga Modal
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={formData.cost}
+                        onChange={(e) =>
+                          setFormData({ ...formData, cost: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
+                      />
+                    </div>
+                  </div>
 
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Stok Awal
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.qtyOnHand}
-                  onChange={(e) =>
-                    setFormData({ ...formData, qtyOnHand: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
-                />
-              </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">
+                      Kategori
+                    </label>
+                    <select
+                      value={formData.categoryId}
+                      onChange={(e) =>
+                        setFormData({ ...formData, categoryId: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
+                    >
+                      <option value="">Pilih Kategori</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  checked={formData.isActive}
-                  onChange={(e) =>
-                    setFormData({ ...formData, isActive: e.target.checked })
-                  }
-                  className="h-4 w-4 rounded border-slate-300"
-                />
-                <label htmlFor="isActive" className="text-sm text-slate-700">
-                  Produk Aktif
-                </label>
-              </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-slate-700">
+                        SKU
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.sku}
+                        onChange={(e) =>
+                          setFormData({ ...formData, sku: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-slate-700">
+                        Barcode
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.barcode}
+                        onChange={(e) =>
+                          setFormData({ ...formData, barcode: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
+                      />
+                    </div>
+                  </div>
 
-              <div className="flex gap-3 pt-4">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">
+                      Stok Awal
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.qtyOnHand}
+                      onChange={(e) =>
+                        setFormData({ ...formData, qtyOnHand: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="isActive"
+                      checked={formData.isActive}
+                      onChange={(e) =>
+                        setFormData({ ...formData, isActive: e.target.checked })
+                      }
+                      className="h-4 w-4 rounded border-slate-300"
+                    />
+                    <label htmlFor="isActive" className="text-sm text-slate-700">
+                      Produk Aktif
+                    </label>
+                  </div>
+                </div> {/* End Fields Column */}
+              </div> {/* End Flex Container */}
+
+              <div className="flex gap-3 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="flex-1 rounded-lg border border-slate-200 bg-white py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                  disabled={isUploading}
+                  className="flex-1 rounded-lg border border-slate-200 bg-white py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 rounded-lg bg-slate-900 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
+                  disabled={isUploading}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-slate-900 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50"
                 >
-                  {editingProduct ? "Perbarui" : "Simpan"}
+                  {isUploading ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      <span>{imageFile ? "Mengunggah..." : "Menyimpan..."}</span>
+                    </>
+                  ) : (
+                    editingProduct ? "Perbarui" : "Simpan"
+                  )}
                 </button>
               </div>
             </form>

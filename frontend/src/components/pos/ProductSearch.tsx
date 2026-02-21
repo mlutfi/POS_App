@@ -10,6 +10,20 @@ interface ProductSearchProps {
   categoryId?: string | null
 }
 
+// Helper to resolve image URL with backend base
+const getImageUrl = (url?: string | null) => {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+
+  // Get base URL from env or fallback, removing /api suffix if present
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  const baseUrl = apiBase.replace('/api', '');
+
+  // Ensure url starts with /
+  const path = url.startsWith("/") ? url : `/${url}`;
+  return `${baseUrl}${path}`;
+};
+
 export function ProductSearch({ onSelect, categoryId }: ProductSearchProps) {
   const [query, setQuery] = useState("")
   const [products, setProducts] = useState<Product[]>([])
@@ -102,7 +116,7 @@ export function ProductSearch({ onSelect, categoryId }: ProductSearchProps) {
               <div className="relative aspect-square overflow-hidden rounded-xl bg-slate-50">
                 {product.imageUrl ? (
                   <img
-                    src={product.imageUrl}
+                    src={getImageUrl(product.imageUrl)}
                     alt={product.name}
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />

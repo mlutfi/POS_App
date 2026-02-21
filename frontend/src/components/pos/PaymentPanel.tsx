@@ -3,7 +3,9 @@
 import { useState } from "react"
 import { salesApi, Sale } from "@/lib/api"
 import { useToast } from "@/components/ui/use-toast"
-import { Banknote, QrCode, Loader2, CheckCircle, XCircle, Sparkles, ArrowRight } from "lucide-react"
+import { Banknote, QrCode, Loader2, CheckCircle, XCircle, Sparkles, ArrowRight, Printer } from "lucide-react"
+import { createPortal } from "react-dom"
+import { ReceiptModal } from "./ReceiptModal"
 
 interface CartItem {
   productId: string
@@ -36,6 +38,13 @@ export function PaymentPanel({
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "qris" | null>(null)
   const [cashAmount, setCashAmount] = useState("")
   const [showSuccess, setShowSuccess] = useState(false)
+  const [showReceipt, setShowReceipt] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // Ensure portals only render on client
+  if (typeof window !== "undefined" && !mounted) {
+    setMounted(true)
+  }
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -151,33 +160,109 @@ export function PaymentPanel({
 
   const change = parseInt(cashAmount) - total
 
-  // ===== Success Screen =====
+  // ===== Success Screen (Full-page popup overlay) =====
   if (showSuccess) {
-    return (
-      <div className="flex flex-col items-center justify-center py-6 text-center animate-scale-in">
-        <div className="relative">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-green-500 shadow-xl shadow-emerald-200/50">
-            <CheckCircle className="h-10 w-10 text-white" />
+    const receiptData = {
+      saleId: sale?.id || "",
+      items: cartItems.map((item) => ({
+        name: item.name,
+        qty: item.qty,
+        price: item.price,
+        subtotal: item.price * item.qty,
+      })),
+      total,
+      cashAmount: parseInt(cashAmount) || total,
+      change: Math.max(0, (parseInt(cashAmount) || total) - total),
+      paymentMethod: paymentMethod as "cash" | "qris",
+      cashierName: sale?.cashierName || "",
+      customerName: customerName || "",
+      createdAt: sale?.createdAt || new Date().toISOString(),
+    }
+
+    const successOverlay = mounted ? createPortal(
+      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+        <div className="relative w-full max-w-sm rounded-3xl bg-white shadow-2xl overflow-hidden animate-scale-in">
+          {/* Green top banner */}
+          <div className="bg-gradient-to-r from-emerald-500 to-green-500 px-6 pt-8 pb-16 text-center relative">
+            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+            <div className="relative flex flex-col items-center">
+              <div className="relative">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/20 shadow-xl ring-4 ring-white/30">
+                  <CheckCircle className="h-10 w-10 text-white" />
+                </div>
+                <div className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 animate-bounce shadow-sm">
+                  <Sparkles className="h-3 w-3 text-white" />
+                </div>
+              </div>
+              <h3 className="mt-4 text-xl font-extrabold text-white tracking-wide">Pembayaran Berhasil!</h3>
+              <p className="mt-1 text-sm text-emerald-100">Transaksi telah selesai</p>
+            </div>
           </div>
-          <div className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 animate-bounce shadow-sm">
-            <Sparkles className="h-3 w-3 text-white" />
+
+          {/* Content card */}
+          <div className="-mt-8 mx-4 rounded-2xl bg-white border border-slate-100 shadow-lg px-5 pt-5 pb-4 space-y-3">
+            {change > 0 && (
+              <div className="rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 px-4 py-3 text-center">
+                <p className="text-xs font-semibold text-amber-500 uppercase tracking-wide">Kembalian</p>
+                <p className="text-2xl font-extrabold text-amber-700 mt-0.5">{formatPrice(change)}</p>
+              </div>
+            )}
+
+            <div className="space-y-1 text-xs text-slate-500 border border-slate-100 rounded-xl px-4 py-3 bg-slate-50">
+              <div className="flex justify-between">
+                <span>No. Transaksi</span>
+                <span className="font-mono font-semibold text-slate-700">{sale?.id?.slice(0, 8).toUpperCase() || '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Total Tagihan</span>
+                <span className="font-bold text-slate-700">{formatPrice(total)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Metode Bayar</span>
+                <span className="font-semibold capitalize">{paymentMethod === 'cash' ? 'Tunai' : 'QRIS'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="px-4 pb-6 pt-3 space-y-2">
+            <button
+              onClick={() => setShowReceipt(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200/50 transition-all duration-200 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <Printer className="h-4 w-4" />
+              Cetak Struk
+            </button>
+            <button
+              onClick={handleReset}
+              className="w-full rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 py-3 text-sm font-bold text-white shadow-lg shadow-amber-200/50 transition-all duration-200 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+            >
+              Transaksi Baru
+            </button>
           </div>
         </div>
-        <h3 className="mt-5 text-lg font-bold text-slate-800">Pembayaran Berhasil!</h3>
-        <p className="mt-1 text-sm text-slate-400">Transaksi telah selesai</p>
-        {change > 0 && (
-          <div className="mt-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 px-5 py-3 animate-fade-in">
-            <p className="text-xs text-amber-600 font-medium">Kembalian</p>
-            <p className="text-lg font-bold text-gradient">{formatPrice(change)}</p>
+      </div>,
+      document.body
+    ) : null;
+
+    return (
+      <>
+        {/* Render a placeholder behind the modal to maintain layout structure */}
+        <div className="flex flex-col items-center justify-center py-6 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50">
+            <CheckCircle className="h-7 w-7 text-emerald-400" />
           </div>
-        )}
-        <button
-          onClick={handleReset}
-          className="mt-6 w-full rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 py-3 text-sm font-bold text-white shadow-lg shadow-amber-200/50 transition-all duration-200 hover:shadow-xl hover:shadow-amber-200/60 hover:scale-[1.02] active:scale-[0.98]"
-        >
-          Transaksi Baru
-        </button>
-      </div>
+          <p className="mt-3 text-sm text-slate-400 font-medium">Transaksi Selesai</p>
+        </div>
+
+        {successOverlay}
+
+        <ReceiptModal
+          open={showReceipt}
+          onClose={() => setShowReceipt(false)}
+          data={receiptData}
+        />
+      </>
     )
   }
 

@@ -27,15 +27,24 @@ type DailyChartPoint struct {
 	Transactions int    `json:"transactions"`
 }
 
+// SaleItemResponse holds the details of a single item in a sale
+type SaleItemResponse struct {
+	ProductName string `json:"productName"`
+	Quantity    int    `json:"quantity"`
+	Price       int    `json:"price"`
+	Subtotal    int    `json:"subtotal"`
+}
+
 // SaleDetailResponse represents a single sale row in the detail table
 type SaleDetailResponse struct {
-	ID            string  `json:"id"`
-	CashierName   string  `json:"cashierName"`
-	CustomerName  *string `json:"customerName"`
-	Total         int     `json:"total"`
-	PaymentMethod string  `json:"paymentMethod"`
-	ItemCount     int     `json:"itemCount"`
-	CreatedAt     string  `json:"createdAt"`
+	ID            string             `json:"id"`
+	CashierName   string             `json:"cashierName"`
+	CustomerName  *string            `json:"customerName"`
+	Total         int                `json:"total"`
+	PaymentMethod string             `json:"paymentMethod"`
+	ItemCount     int                `json:"itemCount"`
+	Items         []SaleItemResponse `json:"items"`
+	CreatedAt     string             `json:"createdAt"`
 }
 
 // CashierOption for filter dropdown

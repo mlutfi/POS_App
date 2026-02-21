@@ -116,6 +116,13 @@ export interface DailyChartPoint {
   transactions: number
 }
 
+export interface SaleItemDetail {
+  productName: string
+  quantity: number
+  price: number
+  subtotal: number
+}
+
 export interface SaleDetail {
   id: string
   cashierName: string
@@ -123,6 +130,7 @@ export interface SaleDetail {
   total: number
   paymentMethod: string
   itemCount: number
+  items: SaleItemDetail[]
   createdAt: string
 }
 
@@ -187,6 +195,18 @@ export const productsApi = {
 
   delete: async (id: string): Promise<void> => {
     await api.delete(`/products/${id}`)
+  },
+
+  uploadImage: async (file: File): Promise<string> => {
+    const formData = new FormData()
+    formData.append('image', file)
+
+    const response = await api.post('/products/upload-image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+    return response.data.data.imageUrl
   },
 }
 
