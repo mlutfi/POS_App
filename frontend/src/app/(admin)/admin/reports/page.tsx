@@ -7,7 +7,8 @@ import {
     ReportSummary,
     DailyChartPoint,
     SaleDetail,
-    CashierOption
+    CashierOption,
+    ProfitReportResponse,
 } from "@/lib/api"
 import { useToast } from "@/components/ui/use-toast"
 import {
@@ -28,10 +29,14 @@ import {
     Banknote,
     Calendar as CalendarIcon,
     X,
+    TrendingUp,
 } from "lucide-react"
+
+type TabType = "SALES" | "PROFIT"
 
 export default function ReportsAdminPage() {
     const { toast } = useToast()
+    const [activeTab, setActiveTab] = useState<TabType>("SALES")
     const [loading, setLoading] = useState(true)
     const [exporting, setExporting] = useState(false)
 
@@ -46,6 +51,7 @@ export default function ReportsAdminPage() {
     const [summary, setSummary] = useState<ReportSummary | null>(null)
     const [chartData, setChartData] = useState<DailyChartPoint[]>([])
     const [sales, setSales] = useState<SaleDetail[]>([])
+    const [profitReport, setProfitReport] = useState<ProfitReportResponse | null>(null)
 
     // New state for modal
     const [selectedSale, setSelectedSale] = useState<SaleDetail | null>(null)
@@ -70,14 +76,19 @@ export default function ReportsAdminPage() {
     async function fetchReportData() {
         setLoading(true)
         try {
-            const [summaryData, mapData, salesData] = await Promise.all([
-                reportsApi.getSummary(filter),
-                reportsApi.getChart(filter),
-                reportsApi.getSales(filter)
-            ])
-            setSummary(summaryData)
-            setChartData(mapData)
-            setSales(salesData)
+            if (activeTab === "SALES") {
+                const [summaryData, mapData, salesData] = await Promise.all([
+                    reportsApi.getSummary(filter),
+                    reportsApi.getChart(filter),
+                    reportsApi.getSales(filter)
+                ])
+                setSummary(summaryData)
+                setChartData(mapData)
+                setSales(salesData)
+            } else if (activeTab === "PROFIT") {
+                const profitData = await reportsApi.getProfitReport(filter)
+                setProfitReport(profitData)
+            }
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -159,6 +170,30 @@ export default function ReportsAdminPage() {
                 </button>
             </div>
 
+            {/* Tabs */}
+            <div className="flex px-1 space-x-1 bg-slate-100/50 p-1 rounded-xl w-fit">
+                <button
+                    onClick={() => setActiveTab("SALES")}
+                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === "SALES"
+                        ? "bg-white text-indigo-600 shadow-sm"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+                        }`}
+                >
+                    <BarChart className="w-4 h-4" />
+                    Penjualan
+                </button>
+                <button
+                    onClick={() => setActiveTab("PROFIT")}
+                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === "PROFIT"
+                        ? "bg-white text-emerald-600 shadow-sm"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+                        }`}
+                >
+                    <TrendingUp className="w-4 h-4" />
+                    Laba Rugi
+                </button>
+            </div>
+
             {/* Filters */}
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-2 mb-4">
@@ -220,11 +255,11 @@ export default function ReportsAdminPage() {
                 </div>
             </div>
 
-            {loading && !summary ? (
+            {loading ? (
                 <div className="flex items-center justify-center py-12">
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900" />
                 </div>
-            ) : summary ? (
+            ) : activeTab === "SALES" && summary ? (
                 <>
                     {/* Summary Cards */}
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -487,7 +522,7 @@ export default function ReportsAdminPage() {
                                             </thead>
                                             <tbody className="divide-y divide-slate-100">
                                                 {selectedSale.items && selectedSale.items.length > 0 ? (
-                                                    selectedSale.items.map((item, index) => (
+                                                    selectedSale.items.map((item: any, index: number) => (
                                                         <tr key={index} className="hover:bg-slate-50/50">
                                                             <td className="px-4 py-3 font-medium text-slate-900">{item.productName}</td>
                                                             <td className="px-4 py-3 text-center text-slate-600">{formatPrice(item.price)}</td>
@@ -525,6 +560,109 @@ export default function ReportsAdminPage() {
                         </div>
                     )}
                 </>
+            ) : activeTab === "PROFIT" && profitReport ? (
+                <div className="space-y-6">
+                    {/* Profit Summary Cards */}
+                    <div className="grid gap-4 sm:grid-cols-3">
+                        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <div className="flex items-center gap-3">
+                                <div className="rounded-lg bg-indigo-100 p-2">
+                                    <DollarSign className="h-5 w-5 text-indigo-600" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-slate-500">Total Omzet</p>
+                                    <p className="text-xl font-bold text-slate-900">{formatPrice(profitReport.totalRevenue)}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <div className="flex items-center gap-3">
+                                <div className="rounded-lg bg-orange-100 p-2">
+                                    <ShoppingBag className="h-5 w-5 text-orange-600" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-slate-500">Total HPP</p>
+                                    <p className="text-xl font-bold text-slate-900">{formatPrice(profitReport.totalCogs)}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <div className="flex items-center gap-3">
+                                <div className="rounded-lg bg-emerald-100 p-2">
+                                    <TrendingUp className="h-5 w-5 text-emerald-600" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-slate-500">Total Laba Kotor</p>
+                                    <p className="text-xl font-bold text-emerald-600">{formatPrice(profitReport.totalProfit)}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Profit Table */}
+                    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                        <div className="border-b border-slate-100 p-5">
+                            <h3 className="text-sm font-semibold text-slate-700">Rincian Laba per Produk</h3>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-slate-50 text-xs uppercase text-slate-500 border-b border-slate-100">
+                                    <tr>
+                                        <th className="px-5 py-3 font-medium">Produk</th>
+                                        <th className="px-5 py-3 font-medium text-center">Terjual</th>
+                                        <th className="px-5 py-3 font-medium text-right">Avg. Harga Jual</th>
+                                        <th className="px-5 py-3 font-medium text-right">Avg. HPP</th>
+                                        <th className="px-5 py-3 font-medium text-right">Omzet</th>
+                                        <th className="px-5 py-3 font-medium text-right">Laba Kotor</th>
+                                        <th className="px-5 py-3 font-medium text-right">Margin (%)</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100/80">
+                                    {profitReport.items && profitReport.items.length > 0 ? (
+                                        profitReport.items.map((item) => (
+                                            <tr key={item.productId} className="hover:bg-slate-50/50">
+                                                <td className="px-5 py-3">
+                                                    <p className="font-medium text-slate-900">{item.productName}</p>
+                                                    <p className="text-xs text-slate-500">{item.categoryName}</p>
+                                                </td>
+                                                <td className="px-5 py-3 text-center text-slate-700">
+                                                    {item.qtySold}
+                                                </td>
+                                                <td className="px-5 py-3 text-right text-slate-700">
+                                                    {formatPrice(item.sellingPrice)}
+                                                </td>
+                                                <td className="px-5 py-3 text-right text-slate-700">
+                                                    {formatPrice(item.avgCost)}
+                                                </td>
+                                                <td className="px-5 py-3 text-right font-medium text-slate-900">
+                                                    {formatPrice(item.revenue)}
+                                                </td>
+                                                <td className="px-5 py-3 text-right font-medium text-emerald-600">
+                                                    {formatPrice(item.profit)}
+                                                </td>
+                                                <td className="px-5 py-3 text-right">
+                                                    <span className={`inline-flex px-2 py-1 rounded-md text-xs font-semibold ${item.profitMargin > 30 ? 'bg-emerald-50 text-emerald-700' :
+                                                        item.profitMargin > 15 ? 'bg-blue-50 text-blue-700' :
+                                                            item.profitMargin > 0 ? 'bg-amber-50 text-amber-700' :
+                                                                'bg-rose-50 text-rose-700'
+                                                        }`}>
+                                                        {item.profitMargin.toFixed(1)}%
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={7} className="px-5 py-8 text-center text-slate-500">
+                                                Tidak ada data laba/rugi untuk rentang waktu ini
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             ) : null}
         </div>
     )

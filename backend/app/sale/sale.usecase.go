@@ -113,6 +113,19 @@ func (u *saleUseCase) PayCash(ctx context.Context, id string, request *PayCashRe
 		return nil, err
 	}
 
+	// Deduct inventory and record stock movement for each item
+	for _, item := range sale.Items {
+		u.DB.Exec("UPDATE inventories SET qty_on_hand = qty_on_hand - ?, updated_at = NOW() WHERE product_id = ?", item.Qty, item.ProductID)
+
+		movement := &entity.StockMovement{
+			ProductID: item.ProductID,
+			Type:      entity.StockMovementTypeSale,
+			QtyDelta:  -item.Qty,
+			RefSaleID: &sale.ID,
+		}
+		u.DB.Create(movement)
+	}
+
 	return &PaymentResponse{
 		ID:        payment.ID,
 		SaleID:    payment.SaleID,

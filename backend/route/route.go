@@ -6,6 +6,7 @@ import (
 	"pos_backend/app/product"
 	"pos_backend/app/report"
 	"pos_backend/app/sale"
+	"pos_backend/app/stock"
 	"pos_backend/app/user"
 	"pos_backend/middleware"
 
@@ -22,6 +23,7 @@ type RouteConfig struct {
 	SaleHandler     sale.SaleHandler
 	UserHandler     user.UserHandler
 	ReportHandler   report.ReportHandler
+	StockHandler    stock.StockHandler
 	Config          *viper.Viper
 }
 
@@ -58,6 +60,7 @@ func (c *RouteConfig) Setup() {
 	c.SaleRoutes(protected)
 	c.UserRoutes(protected)
 	c.ReportRoutes(protected)
+	c.StockRoutes(protected)
 }
 
 func (c *RouteConfig) AuthRoutes(router fiber.Router) {
@@ -114,4 +117,20 @@ func (c *RouteConfig) ReportRoutes(router fiber.Router) {
 	reportGroup.Get("/sales", c.ReportHandler.GetSalesDetail)
 	reportGroup.Get("/export", c.ReportHandler.ExportExcel)
 	reportGroup.Get("/cashiers", c.ReportHandler.GetCashiers)
+	reportGroup.Get("/top-products", c.ReportHandler.GetTopProducts)
+	reportGroup.Get("/profit", c.ReportHandler.GetProfitReport)
+}
+
+func (c *RouteConfig) StockRoutes(router fiber.Router) {
+	stockGroup := router.Group("/stock", c.AuthMiddleware)
+
+	// Protected owner/ops routes
+	protectedGroup := stockGroup.Group("", middleware.RequireRole("OWNER", "OPS"))
+	protectedGroup.Post("/in", c.StockHandler.AddStockIn)
+	protectedGroup.Get("/in", c.StockHandler.GetStockIns)
+	protectedGroup.Post("/out", c.StockHandler.AddStockOut)
+	protectedGroup.Get("/out", c.StockHandler.GetStockOuts)
+
+	// Inventory can be viewed by all authenticated users
+	stockGroup.Get("/inventory", c.StockHandler.GetInventory)
 }

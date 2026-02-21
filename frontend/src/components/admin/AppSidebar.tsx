@@ -40,6 +40,7 @@ const navItems = [
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/products", label: "Produk", icon: Package },
     { href: "/admin/categories", label: "Kategori", icon: FolderTree },
+    { href: "/admin/stock", label: "Stok", icon: Package },
     { href: "/admin/users", label: "Pengguna", icon: Users },
     { href: "/admin/reports", label: "Laporan", icon: BarChart3 },
 ]

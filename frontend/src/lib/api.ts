@@ -92,51 +92,41 @@ export interface Sale {
   createdAt: string
 }
 
-export interface ReportFilter {
-  startDate?: string
-  endDate?: string
-  cashierId?: string
-  paymentMethod?: string
-}
+import {
+  ReportFilter,
+  ReportSummary,
+  DailyChartPoint,
+  SaleItemDetail,
+  SaleDetail,
+  CashierOption,
+  TopProduct,
+  ProfitReportItem,
+  ProfitReportResponse,
+} from './reports'
 
-export interface ReportSummary {
-  totalRevenue: number
-  totalTransactions: number
-  totalItems: number
-  averageOrder: number
-  cashRevenue: number
-  cashTransactions: number
-  qrisRevenue: number
-  qrisTransactions: number
-}
+import {
+  StockIn,
+  StockInRequest,
+  StockOut,
+  StockOutRequest,
+  Inventory
+} from './stock'
 
-export interface DailyChartPoint {
-  date: string
-  revenue: number
-  transactions: number
-}
-
-export interface SaleItemDetail {
-  productName: string
-  quantity: number
-  price: number
-  subtotal: number
-}
-
-export interface SaleDetail {
-  id: string
-  cashierName: string
-  customerName?: string
-  total: number
-  paymentMethod: string
-  itemCount: number
-  items: SaleItemDetail[]
-  createdAt: string
-}
-
-export interface CashierOption {
-  id: string
-  name: string
+export type {
+  ReportFilter,
+  ReportSummary,
+  DailyChartPoint,
+  SaleItemDetail,
+  SaleDetail,
+  CashierOption,
+  TopProduct,
+  ProfitReportItem,
+  ProfitReportResponse,
+  StockIn,
+  StockInRequest,
+  StockOut,
+  StockOutRequest,
+  Inventory
 }
 
 // Auth API
@@ -318,4 +308,36 @@ export const reportsApi = {
     const response = await api.get('/reports/cashiers')
     return response.data.data ?? []
   },
+
+  getTopProducts: async (limit: number = 10): Promise<TopProduct[]> => {
+    const response = await api.get(`/reports/top-products?limit=${limit}`)
+    return response.data.data ?? []
+  },
+  getProfitReport: async (filter?: ReportFilter): Promise<ProfitReportResponse> => {
+    const response = await api.get('/reports/profit', { params: filter })
+    return response.data.data
+  },
+}
+
+export const stockApi = {
+  addStockIn: async (data: StockInRequest): Promise<StockIn> => {
+    const response = await api.post('/stock/in', data)
+    return response.data.data
+  },
+  getStockIns: async (page = 1, limit = 20): Promise<{ data: StockIn[]; meta: any }> => {
+    const response = await api.get('/stock/in', { params: { page, limit } })
+    return { data: response.data.data ?? [], meta: response.data.meta }
+  },
+  addStockOut: async (data: StockOutRequest): Promise<StockOut> => {
+    const response = await api.post('/stock/out', data)
+    return response.data.data
+  },
+  getStockOuts: async (page = 1, limit = 20): Promise<{ data: StockOut[]; meta: any }> => {
+    const response = await api.get('/stock/out', { params: { page, limit } })
+    return { data: response.data.data ?? [], meta: response.data.meta }
+  },
+  getInventory: async (): Promise<Inventory[]> => {
+    const response = await api.get('/stock/inventory')
+    return response.data.data ?? []
+  }
 }

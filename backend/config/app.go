@@ -6,6 +6,7 @@ import (
 	"pos_backend/app/product"
 	"pos_backend/app/report"
 	"pos_backend/app/sale"
+	"pos_backend/app/stock"
 	"pos_backend/app/user"
 	"pos_backend/middleware"
 	"pos_backend/route"
@@ -33,6 +34,7 @@ func Bootstrap(config *BootstrapConfig) {
 	saleRepository := sale.NewSaleRepository(config.DB)
 	userRepository := user.NewUserRepository(config.DB)
 	reportRepository := report.NewReportRepository(config.DB)
+	stockRepository := stock.NewStockRepository(config.DB)
 
 	// Use Cases
 	authUseCase := auth.NewAuthUseCase(config.DB, authRepository, config.Config)
@@ -41,6 +43,7 @@ func Bootstrap(config *BootstrapConfig) {
 	saleUseCase := sale.NewSaleUseCase(config.DB, saleRepository)
 	userUseCase := user.NewUserUseCase(config.DB, userRepository)
 	reportUseCase := report.NewReportUseCase(config.DB, reportRepository)
+	stockUseCase := stock.NewStockUseCase(config.DB, stockRepository)
 
 	// Handlers
 	authHandler := auth.NewAuthHandler(authUseCase)
@@ -49,6 +52,7 @@ func Bootstrap(config *BootstrapConfig) {
 	saleHandler := sale.NewSaleHandler(saleUseCase)
 	userHandler := user.NewUserHandler(userUseCase)
 	reportHandler := report.NewReportHandler(reportUseCase)
+	stockHandler := stock.NewStockHandler(stockUseCase)
 
 	// Middleware
 	authMiddleware := middleware.AuthMiddleware(config.Config)
@@ -63,6 +67,7 @@ func Bootstrap(config *BootstrapConfig) {
 		SaleHandler:     saleHandler,
 		UserHandler:     userHandler,
 		ReportHandler:   reportHandler,
+		StockHandler:    stockHandler,
 		Config:          config.Config,
 	}
 

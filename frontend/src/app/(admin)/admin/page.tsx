@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { usePathname } from "next/navigation"
-import { salesApi, productsApi, categoriesApi } from "@/lib/api"
+import { salesApi, productsApi, categoriesApi, reportsApi, type TopProduct } from "@/lib/api"
 import {
   DollarSign,
   ShoppingBag,
@@ -10,7 +10,7 @@ import {
   Users,
   TrendingUp,
   TrendingDown,
-  ArrowUpRight,
+  Trophy,
   RefreshCw,
 } from "lucide-react"
 
@@ -34,6 +34,7 @@ export default function AdminDashboard() {
   })
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [topProducts, setTopProducts] = useState<TopProduct[]>([])
   const pathname = usePathname()
 
   const fetchStats = useCallback(async (isRefresh = false) => {
@@ -41,10 +42,11 @@ export default function AdminDashboard() {
     else setLoading(true)
 
     try {
-      const [report, products, categories] = await Promise.all([
+      const [report, products, categories, topProds] = await Promise.all([
         salesApi.getDailyReport(),
         productsApi.getAll(),
         categoriesApi.getAll(),
+        reportsApi.getTopProducts(10),
       ])
 
       console.log("DASHBOARD DATA:", { report, products, categories });
@@ -57,6 +59,7 @@ export default function AdminDashboard() {
         cashSales: report.cashSales,
         qrisSales: report.qrisSales,
       })
+      setTopProducts(topProds)
     } catch (error) {
       console.error("Failed to fetch stats:", error)
     } finally {
@@ -232,28 +235,48 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Quick Actions */}
+        {/* Top 10 Produk Terlaris */}
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Aksi Cepat</h2>
-          <p className="text-sm text-slate-500">Akses fitur utama dengan cepat</p>
+          <div className="flex items-center gap-2 mb-1">
+            <Trophy className="h-5 w-5 text-amber-500" />
+            <h2 className="text-lg font-semibold text-slate-900">Top 10 Produk Terlaris</h2>
+          </div>
+          <p className="text-sm text-slate-500">Produk dengan penjualan terbanyak</p>
 
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <button className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white p-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-              <Package className="h-4 w-4" />
-              Tambah Produk
-            </button>
-            <button className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white p-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-              <Users className="h-4 w-4" />
-              Tambah User
-            </button>
-            <button className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white p-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-              <ShoppingBag className="h-4 w-4" />
-              Lihat Transaksi
-            </button>
-            <button className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white p-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-              <ArrowUpRight className="h-4 w-4" />
-              Export Laporan
-            </button>
+          <div className="mt-4 space-y-3">
+            {topProducts.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-6">Belum ada data penjualan</p>
+            ) : (
+              topProducts.map((product, index) => (
+                <div
+                  key={product.productId}
+                  className="flex items-center gap-3 rounded-lg border border-slate-100 p-3 transition hover:bg-slate-50"
+                >
+                  <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${index === 0 ? 'bg-amber-500' : index === 1 ? 'bg-slate-400' : index === 2 ? 'bg-amber-700' : 'bg-slate-300'
+                    }`}>
+                    {index + 1}
+                  </span>
+                  {product.imageUrl ? (
+                    <img
+                      src={product.imageUrl.startsWith('http') ? product.imageUrl : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:3001'}${product.imageUrl}`}
+                      alt={product.productName}
+                      className="h-10 w-10 shrink-0 rounded-lg object-cover border border-slate-200"
+                    />
+                  ) : (
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100">
+                      <Package className="h-5 w-5 text-slate-400" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-900 truncate">{product.productName}</p>
+                    <p className="text-xs text-slate-500">{product.totalQty} terjual</p>
+                  </div>
+                  <span className="text-sm font-semibold text-slate-700 shrink-0">
+                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(product.totalSales)}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

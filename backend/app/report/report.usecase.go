@@ -17,6 +17,8 @@ type ReportUseCase interface {
 	GetSalesDetail(ctx context.Context, filter *ReportFilter) ([]SaleDetailResponse, error)
 	ExportExcel(ctx context.Context, filter *ReportFilter) ([]byte, error)
 	GetCashiers(ctx context.Context) ([]CashierOption, error)
+	GetTopProducts(ctx context.Context, limit int) ([]TopProductResponse, error)
+	GetProfitReport(ctx context.Context, filter *ReportFilter) (*ProfitReportResponse, error)
 }
 
 type reportUseCase struct {
@@ -259,4 +261,34 @@ func (u *reportUseCase) ExportExcel(ctx context.Context, filter *ReportFilter) (
 
 func (u *reportUseCase) GetCashiers(ctx context.Context) ([]CashierOption, error) {
 	return u.Repository.GetCashiers(ctx)
+}
+
+func (u *reportUseCase) GetTopProducts(ctx context.Context, limit int) ([]TopProductResponse, error) {
+	return u.Repository.GetTopProducts(ctx, limit)
+}
+
+func (u *reportUseCase) GetProfitReport(ctx context.Context, filter *ReportFilter) (*ProfitReportResponse, error) {
+	items, err := u.Repository.GetProfitReport(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	totalRevenue := 0
+	totalCOGS := 0
+	totalProfit := 0
+
+	for _, item := range items {
+		totalRevenue += item.Revenue
+		totalCOGS += item.COGS
+		totalProfit += item.Profit
+	}
+
+	response := &ProfitReportResponse{
+		Items:        items,
+		TotalRevenue: totalRevenue,
+		TotalCOGS:    totalCOGS,
+		TotalProfit:  totalProfit,
+	}
+
+	return response, nil
 }

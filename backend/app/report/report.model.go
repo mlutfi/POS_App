@@ -52,3 +52,32 @@ type CashierOption struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
+
+// TopProductResponse represents a top selling product
+type TopProductResponse struct {
+	ProductID   string `json:"productId"`
+	ProductName string `json:"productName"`
+	ImageURL    string `json:"imageUrl"`
+	TotalQty    int    `json:"totalQty"`
+	TotalSales  int    `json:"totalSales"`
+}
+
+type ProfitReportItem struct {
+	ProductID    string  `json:"productId"`
+	ProductName  string  `json:"productName"`
+	CategoryName string  `json:"categoryName"`
+	QtySold      int     `json:"qtySold"`
+	AvgCost      int     `json:"avgCost"`
+	SellingPrice int     `json:"sellingPrice"`
+	Revenue      int     `json:"revenue"`
+	COGS         int     `json:"cogs"`
+	Profit       int     `json:"profit"`
+	ProfitMargin float64 `json:"profitMargin"`
+}
+
+type ProfitReportResponse struct {
+	Items        []ProfitReportItem `json:"items"`
+	TotalRevenue int                `json:"totalRevenue"`
+	TotalCOGS    int                `json:"totalCogs"`
+	TotalProfit  int                `json:"totalProfit"`
+}

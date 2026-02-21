@@ -408,7 +408,7 @@ export default function PosReportPage() {
                                                                 </tr>
                                                             </thead>
                                                             <tbody className="divide-y divide-slate-100">
-                                                                {sale.items?.map((item, idx) => (
+                                                                {sale.items?.map((item: any, idx: number) => (
                                                                     <tr key={idx} className="hover:bg-slate-50/50">
                                                                         <td className="px-4 py-2 font-medium text-slate-700">{item.productName}</td>
                                                                         <td className="px-4 py-2 text-center text-slate-500">{formatPrice(item.price)}</td>
