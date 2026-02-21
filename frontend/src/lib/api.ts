@@ -92,6 +92,45 @@ export interface Sale {
   createdAt: string
 }
 
+export interface ReportFilter {
+  startDate?: string
+  endDate?: string
+  cashierId?: string
+  paymentMethod?: string
+}
+
+export interface ReportSummary {
+  totalRevenue: number
+  totalTransactions: number
+  totalItems: number
+  averageOrder: number
+  cashRevenue: number
+  cashTransactions: number
+  qrisRevenue: number
+  qrisTransactions: number
+}
+
+export interface DailyChartPoint {
+  date: string
+  revenue: number
+  transactions: number
+}
+
+export interface SaleDetail {
+  id: string
+  cashierName: string
+  customerName?: string
+  total: number
+  paymentMethod: string
+  itemCount: number
+  createdAt: string
+}
+
+export interface CashierOption {
+  id: string
+  name: string
+}
+
 // Auth API
 export const authApi = {
   login: async (email: string, password: string): Promise<LoginResponse> => {
@@ -99,16 +138,16 @@ export const authApi = {
     console.log('Login response:', response.data);
     return response.data.data
   },
-  
+
   logout: async (): Promise<void> => {
     await api.post('/auth/logout')
   },
-  
+
   getMe: async (): Promise<User> => {
     const response = await api.get('/auth/me')
     return response.data.data
   },
-  
+
   changePassword: async (currentPassword: string, newPassword: string): Promise<void> => {
     await api.post('/auth/change-password', { currentPassword, newPassword })
   },
@@ -120,32 +159,32 @@ export const productsApi = {
     const response = await api.get('/products')
     return response.data.data ?? []
   },
-  
+
   getById: async (id: string): Promise<Product> => {
     const response = await api.get(`/products/${id}`)
     return response.data.data
   },
-  
+
   search: async (query: string): Promise<Product[]> => {
     const response = await api.get(`/products/search?q=${encodeURIComponent(query)}`)
     return response.data.data ?? []
   },
-  
+
   getByCategory: async (categoryId: string): Promise<Product[]> => {
     const response = await api.get(`/products/by-category?categoryId=${categoryId}`)
     return response.data.data ?? []
   },
-  
+
   create: async (data: Partial<Product>): Promise<Product> => {
     const response = await api.post('/products', data)
     return response.data.data
   },
-  
+
   update: async (id: string, data: Partial<Product>): Promise<Product> => {
     const response = await api.put(`/products/${id}`, data)
     return response.data.data
   },
-  
+
   delete: async (id: string): Promise<void> => {
     await api.delete(`/products/${id}`)
   },
@@ -157,17 +196,17 @@ export const categoriesApi = {
     const response = await api.get('/categories')
     return response.data.data ?? []
   },
-  
+
   create: async (name: string): Promise<Category> => {
     const response = await api.post('/categories', { name })
     return response.data.data
   },
-  
+
   update: async (id: string, name: string): Promise<Category> => {
     const response = await api.put(`/categories/${id}`, { name })
     return response.data.data
   },
-  
+
   delete: async (id: string): Promise<void> => {
     await api.delete(`/categories/${id}`)
   },
@@ -179,21 +218,21 @@ export const salesApi = {
     const response = await api.post('/sales', { items, customerName })
     return response.data.data
   },
-  
+
   getById: async (id: string): Promise<Sale> => {
     const response = await api.get(`/sales/${id}`)
     return response.data.data
   },
-  
+
   payCash: async (id: string, amount: number): Promise<void> => {
     await api.post(`/sales/${id}/pay-cash`, { amount })
   },
-  
+
   payQRIS: async (id: string): Promise<{ qrisUrl: string }> => {
     const response = await api.post(`/sales/${id}/pay-qris`)
     return response.data.data
   },
-  
+
   getDailyReport: async (date?: string): Promise<{
     date: string
     totalSales: number
@@ -204,5 +243,59 @@ export const salesApi = {
   }> => {
     const response = await api.get(`/sales/daily-report${date ? `?date=${date}` : ''}`)
     return response.data.data
+  },
+}
+
+// Reports API
+export const reportsApi = {
+  getSummary: async (filter?: ReportFilter): Promise<ReportSummary> => {
+    const params = new URLSearchParams()
+    if (filter?.startDate) params.append('startDate', filter.startDate)
+    if (filter?.endDate) params.append('endDate', filter.endDate)
+    if (filter?.cashierId) params.append('cashierId', filter.cashierId)
+    if (filter?.paymentMethod) params.append('paymentMethod', filter.paymentMethod)
+
+    const response = await api.get(`/reports/summary?${params.toString()}`)
+    return response.data.data
+  },
+
+  getChart: async (filter?: ReportFilter): Promise<DailyChartPoint[]> => {
+    const params = new URLSearchParams()
+    if (filter?.startDate) params.append('startDate', filter.startDate)
+    if (filter?.endDate) params.append('endDate', filter.endDate)
+    if (filter?.cashierId) params.append('cashierId', filter.cashierId)
+    if (filter?.paymentMethod) params.append('paymentMethod', filter.paymentMethod)
+
+    const response = await api.get(`/reports/chart?${params.toString()}`)
+    return response.data.data ?? []
+  },
+
+  getSales: async (filter?: ReportFilter): Promise<SaleDetail[]> => {
+    const params = new URLSearchParams()
+    if (filter?.startDate) params.append('startDate', filter.startDate)
+    if (filter?.endDate) params.append('endDate', filter.endDate)
+    if (filter?.cashierId) params.append('cashierId', filter.cashierId)
+    if (filter?.paymentMethod) params.append('paymentMethod', filter.paymentMethod)
+
+    const response = await api.get(`/reports/sales?${params.toString()}`)
+    return response.data.data ?? []
+  },
+
+  exportExcel: async (filter?: ReportFilter): Promise<Blob> => {
+    const params = new URLSearchParams()
+    if (filter?.startDate) params.append('startDate', filter.startDate)
+    if (filter?.endDate) params.append('endDate', filter.endDate)
+    if (filter?.cashierId) params.append('cashierId', filter.cashierId)
+    if (filter?.paymentMethod) params.append('paymentMethod', filter.paymentMethod)
+
+    const response = await api.get(`/reports/export?${params.toString()}`, {
+      responseType: 'blob'
+    })
+    return response.data
+  },
+
+  getCashiers: async (): Promise<CashierOption[]> => {
+    const response = await api.get('/reports/cashiers')
+    return response.data.data ?? []
   },
 }

@@ -4,6 +4,7 @@ import (
 	"pos_backend/app/auth"
 	"pos_backend/app/category"
 	"pos_backend/app/product"
+	"pos_backend/app/report"
 	"pos_backend/app/sale"
 	"pos_backend/app/user"
 	"pos_backend/middleware"
@@ -20,6 +21,7 @@ type RouteConfig struct {
 	CategoryHandler category.CategoryHandler
 	SaleHandler     sale.SaleHandler
 	UserHandler     user.UserHandler
+	ReportHandler   report.ReportHandler
 	Config          *viper.Viper
 }
 
@@ -52,6 +54,7 @@ func (c *RouteConfig) Setup() {
 	c.CategoryRoutes(protected)
 	c.SaleRoutes(protected)
 	c.UserRoutes(protected)
+	c.ReportRoutes(protected)
 }
 
 func (c *RouteConfig) AuthRoutes(router fiber.Router) {
@@ -95,7 +98,16 @@ func (c *RouteConfig) UserRoutes(router fiber.Router) {
 	userGroup := router.Group("/users")
 	userGroup.Get("/", middleware.RequireRole("OWNER", "OPS"), c.UserHandler.GetAll)
 	userGroup.Get("/:id", middleware.RequireRole("OWNER", "OPS"), c.UserHandler.GetByID)
-	userGroup.Post("/", c.UserHandler.Create)
+	userGroup.Post("/", middleware.RequireRole("OWNER"), c.UserHandler.Create)
 	userGroup.Put("/:id", middleware.RequireRole("OWNER"), c.UserHandler.Update)
 	userGroup.Delete("/:id", middleware.RequireRole("OWNER"), c.UserHandler.Delete)
+}
+
+func (c *RouteConfig) ReportRoutes(router fiber.Router) {
+	reportGroup := router.Group("/reports", middleware.RequireRole("OWNER", "OPS"))
+	reportGroup.Get("/summary", c.ReportHandler.GetSummary)
+	reportGroup.Get("/chart", c.ReportHandler.GetChartData)
+	reportGroup.Get("/sales", c.ReportHandler.GetSalesDetail)
+	reportGroup.Get("/export", c.ReportHandler.ExportExcel)
+	reportGroup.Get("/cashiers", c.ReportHandler.GetCashiers)
 }

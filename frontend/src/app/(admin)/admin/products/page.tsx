@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { productsApi, categoriesApi, Product, Category } from "@/lib/api"
-import { useToast } from "@/components/ui/use-toast"
+import { useState, useEffect } from "react";
+import { productsApi, categoriesApi, Product, Category } from "@/lib/api";
+import { useToast } from "@/components/ui/use-toast";
 import {
   Plus,
   Search,
@@ -11,16 +11,16 @@ import {
   Package,
   MoreVertical,
   X,
-} from "lucide-react"
+} from "lucide-react";
 
 export default function ProductsAdminPage() {
-  const { toast } = useToast()
-  const [products, setProducts] = useState<Product[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState("")
-  const [showModal, setShowModal] = useState(false)
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const { toast } = useToast();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     price: "",
@@ -30,28 +30,28 @@ export default function ProductsAdminPage() {
     cost: "",
     qtyOnHand: "",
     isActive: true,
-  })
+  });
 
   useEffect(() => {
-    fetchData()
-  }, [])
+    fetchData();
+  }, []);
 
   async function fetchData() {
     try {
       const [productsData, categoriesData] = await Promise.all([
         productsApi.getAll(),
         categoriesApi.getAll(),
-      ])
-      setProducts(productsData ?? [])
-      setCategories(categoriesData ?? [])
+      ]);
+      setProducts(productsData ?? []);
+      setCategories(categoriesData ?? []);
     } catch (error) {
       toast({
         title: "Error",
         description: "Gagal memuat data",
         variant: "destructive",
-      })
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -59,19 +59,19 @@ export default function ProductsAdminPage() {
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.sku?.toLowerCase().includes(search.toLowerCase()) ||
-      p.barcode?.toLowerCase().includes(search.toLowerCase())
-  )
+      p.barcode?.toLowerCase().includes(search.toLowerCase()),
+  );
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       minimumFractionDigits: 0,
-    }).format(price)
-  }
+    }).format(price);
+  };
 
   function openCreateModal() {
-    setEditingProduct(null)
+    setEditingProduct(null);
     setFormData({
       name: "",
       price: "",
@@ -81,12 +81,12 @@ export default function ProductsAdminPage() {
       cost: "",
       qtyOnHand: "",
       isActive: true,
-    })
-    setShowModal(true)
+    });
+    setShowModal(true);
   }
 
   function openEditModal(product: Product) {
-    setEditingProduct(product)
+    setEditingProduct(product);
     setFormData({
       name: product.name,
       price: product.price.toString(),
@@ -96,12 +96,12 @@ export default function ProductsAdminPage() {
       cost: product.cost?.toString() || "",
       qtyOnHand: product.qtyOnHand?.toString() || "",
       isActive: product.isActive,
-    })
-    setShowModal(true)
+    });
+    setShowModal(true);
   }
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+    e.preventDefault();
 
     const data = {
       name: formData.name,
@@ -112,49 +112,49 @@ export default function ProductsAdminPage() {
       cost: formData.cost ? parseInt(formData.cost) : undefined,
       qtyOnHand: formData.qtyOnHand ? parseInt(formData.qtyOnHand) : 0,
       isActive: formData.isActive,
-    }
+    };
 
     try {
       if (editingProduct) {
-        await productsApi.update(editingProduct.id, data)
+        await productsApi.update(editingProduct.id, data);
         toast({
           title: "Berhasil",
           description: "Produk berhasil diperbarui",
-        })
+        });
       } else {
-        await productsApi.create(data)
+        await productsApi.create(data);
         toast({
           title: "Berhasil",
           description: "Produk berhasil dibuat",
-        })
+        });
       }
-      setShowModal(false)
-      fetchData()
+      setShowModal(false);
+      fetchData();
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.response?.data?.message || "Gagal menyimpan produk",
         variant: "destructive",
-      })
+      });
     }
   }
 
   async function handleDelete(product: Product) {
-    if (!confirm(`Hapus produk "${product.name}"?`)) return
+    if (!confirm(`Hapus produk "${product.name}"?`)) return;
 
     try {
-      await productsApi.delete(product.id)
+      await productsApi.delete(product.id);
       toast({
         title: "Berhasil",
         description: "Produk berhasil dihapus",
-      })
-      fetchData()
+      });
+      fetchData();
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.response?.data?.message || "Gagal menghapus produk",
         variant: "destructive",
-      })
+      });
     }
   }
 
@@ -163,7 +163,7 @@ export default function ProductsAdminPage() {
       <div className="flex items-center justify-center py-12">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900" />
       </div>
-    )
+    );
   }
 
   return (
@@ -260,10 +260,11 @@ export default function ProductsAdminPage() {
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${product.isActive
+                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                        product.isActive
                           ? "bg-green-100 text-green-700"
                           : "bg-red-100 text-red-700"
-                        }`}
+                      }`}
                     >
                       {product.isActive ? "Aktif" : "Nonaktif"}
                     </span>
@@ -461,5 +462,5 @@ export default function ProductsAdminPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

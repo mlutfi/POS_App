@@ -192,8 +192,8 @@ export default function AdminDashboard() {
               className="bg-green-500 transition-all"
               style={{
                 width: `${stats.totalSales > 0
-                    ? (stats.cashSales / stats.totalSales) * 100
-                    : 0
+                  ? (stats.cashSales / stats.totalSales) * 100
+                  : 0
                   }%`,
               }}
             />
@@ -201,8 +201,8 @@ export default function AdminDashboard() {
               className="bg-purple-500 transition-all"
               style={{
                 width: `${stats.totalSales > 0
-                    ? (stats.qrisSales / stats.totalSales) * 100
-                    : 0
+                  ? (stats.qrisSales / stats.totalSales) * 100
+                  : 0
                   }%`,
               }}
             />
