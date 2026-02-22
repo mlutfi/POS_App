@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { salesApi, Sale } from "@/lib/api"
 import { useToast } from "@/components/ui/use-toast"
-import { Banknote, QrCode, Loader2, CheckCircle, XCircle, Sparkles, ArrowRight, Printer } from "lucide-react"
+import { Banknote, QrCode, Loader2, CheckCircle, XCircle, Sparkles, ArrowRight, Printer, RefreshCw, AlertCircle } from "lucide-react"
 import { createPortal } from "react-dom"
 import { ReceiptModal } from "./ReceiptModal"
+import QRCode from "qrcode"
 
 interface CartItem {
   productId: string
@@ -41,10 +42,73 @@ export function PaymentPanel({
   const [showReceipt, setShowReceipt] = useState(false)
   const [mounted, setMounted] = useState(false)
 
+  // QRIS state
+  const [qrisData, setQrisData] = useState<{
+    id: string
+    qrisUrl: string | null
+    providerRef: string | null
+    status: string
+  } | null>(null)
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  const [qrisStatus, setQrisStatus] = useState<"PENDING" | "PAID" | "EXPIRED" | "FAILED">("PENDING")
+  const [pollingCount, setPollingCount] = useState(0)
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
   // Ensure portals only render on client
   if (typeof window !== "undefined" && !mounted) {
     setMounted(true)
   }
+
+  /** Generate QR Data URL from a QRIS string */
+  const generateQrDataUrl = useCallback(async (qrisString: string) => {
+    try {
+      const dataUrl = await QRCode.toDataURL(qrisString, {
+        width: 280,
+        margin: 2,
+        color: { dark: "#1e1b4b", light: "#ffffff" },
+        errorCorrectionLevel: "M",
+      })
+      setQrDataUrl(dataUrl)
+    } catch (err) {
+      console.error("Failed to generate QR code:", err)
+    }
+  }, [])
+
+  /** Start polling Midtrans for QRIS payment status */
+  const startPolling = useCallback((saleId: string) => {
+    if (pollingRef.current) clearInterval(pollingRef.current)
+
+    pollingRef.current = setInterval(async () => {
+      try {
+        const result = await salesApi.getQRISStatus(saleId)
+        setPollingCount((c) => c + 1)
+
+        if (result.status === "PAID") {
+          clearInterval(pollingRef.current!)
+          setQrisStatus("PAID")
+          setShowSuccess(true)
+          onPaidSuccess()
+        } else if (result.status === "EXPIRED" || result.status === "FAILED") {
+          clearInterval(pollingRef.current!)
+          setQrisStatus(result.status as "EXPIRED" | "FAILED")
+          toast({
+            title: "Pembayaran Gagal",
+            description: `Status QRIS: ${result.status}`,
+            variant: "destructive",
+          })
+        }
+      } catch {
+        // Ignore polling errors silently
+      }
+    }, 3000) // Poll every 3 seconds
+  }, [onPaidSuccess, toast])
+
+  // Clean up polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current)
+    }
+  }, [])
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -117,15 +181,24 @@ export function PaymentPanel({
     }
   }
 
-  const handleQRISPayment = async () => {
-    if (!sale) return
-
+  const handleQRISPayment = async (currentSale: Sale) => {
     setLoading(true)
     try {
-      const result = await salesApi.payQRIS(sale.id)
+      const result = await salesApi.payQRIS(currentSale.id)
+      setQrisData(result)
+      setQrisStatus("PENDING")
+      setPollingCount(0)
+
+      if (result.qrisUrl) {
+        await generateQrDataUrl(result.qrisUrl)
+      }
+
+      // Start polling for payment status
+      startPolling(currentSale.id)
+
       toast({
-        title: "QRIS Generated",
-        description: "Silakan scan QR code untuk pembayaran",
+        title: "QR Code Siap",
+        description: "Scan QR code menggunakan aplikasi e-wallet",
       })
     } catch (error: any) {
       toast({
@@ -133,6 +206,7 @@ export function PaymentPanel({
         description: error.response?.data?.message || "Gagal membuat QRIS",
         variant: "destructive",
       })
+      setPaymentMethod(null)
     } finally {
       setLoading(false)
     }
@@ -147,20 +221,30 @@ export function PaymentPanel({
     }
 
     if (method === "qris") {
-      await handleQRISPayment()
+      await handleQRISPayment(currentSale)
     }
   }
 
   const handleReset = () => {
+    if (pollingRef.current) clearInterval(pollingRef.current)
     setPaymentMethod(null)
     setCashAmount("")
     setShowSuccess(false)
+    setQrisData(null)
+    setQrDataUrl(null)
+    setQrisStatus("PENDING")
     onClear()
+  }
+
+  const handleRefreshQRIS = async () => {
+    if (!sale) return
+    if (pollingRef.current) clearInterval(pollingRef.current)
+    await handleQRISPayment(sale)
   }
 
   const change = parseInt(cashAmount) - total
 
-  // ===== Success Screen (Full-page popup overlay) =====
+  // ===== Success Screen =====
   if (showSuccess) {
     const receiptData = {
       saleId: sale?.id || "",
@@ -247,7 +331,6 @@ export function PaymentPanel({
 
     return (
       <>
-        {/* Render a placeholder behind the modal to maintain layout structure */}
         <div className="flex flex-col items-center justify-center py-6 text-center">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50">
             <CheckCircle className="h-7 w-7 text-emerald-400" />
@@ -363,20 +446,84 @@ export function PaymentPanel({
           </button>
         </div>
 
-        <div className="flex flex-col items-center justify-center py-4">
-          <div className="flex h-36 w-36 items-center justify-center rounded-2xl bg-slate-50 border border-slate-200 animate-pulse-glow">
-            <QrCode className="h-20 w-20 text-slate-300" />
-          </div>
-          <p className="mt-4 text-sm text-slate-400 font-medium">Scan QR code untuk membayar</p>
-          <p className="mt-1 text-xl font-extrabold text-gradient">{formatPrice(total)}</p>
+        {/* QR Code Area */}
+        <div className="flex flex-col items-center justify-center">
+          {loading ? (
+            <div className="flex h-48 w-48 flex-col items-center justify-center rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200">
+              <Loader2 className="h-8 w-8 text-violet-400 animate-spin" />
+              <p className="mt-2 text-xs text-slate-400">Membuat QR Code...</p>
+            </div>
+          ) : qrisStatus === "EXPIRED" || qrisStatus === "FAILED" ? (
+            <div className="flex h-48 w-48 flex-col items-center justify-center rounded-2xl bg-red-50 border-2 border-dashed border-red-200">
+              <AlertCircle className="h-10 w-10 text-red-400" />
+              <p className="mt-2 text-xs font-semibold text-red-500">
+                {qrisStatus === "EXPIRED" ? "QR Code Kedaluwarsa" : "Pembayaran Gagal"}
+              </p>
+            </div>
+          ) : qrDataUrl ? (
+            <div className="relative">
+              {/* QR code image */}
+              <div className="rounded-2xl overflow-hidden border-4 border-violet-100 shadow-lg shadow-violet-100/50 p-2 bg-white">
+                <img
+                  src={qrDataUrl}
+                  alt="QRIS Payment QR Code"
+                  width={200}
+                  height={200}
+                  className="rounded-xl"
+                />
+              </div>
+              {/* QRIS badge */}
+              <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 px-3 py-1 shadow-lg">
+                <QrCode className="h-3 w-3 text-white" />
+                <span className="text-xs font-bold text-white">QRIS</span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex h-48 w-48 flex-col items-center justify-center rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200">
+              <QrCode className="h-12 w-12 text-slate-300" />
+              <p className="mt-2 text-xs text-slate-400">QR tidak tersedia</p>
+            </div>
+          )}
         </div>
 
-        <button
-          onClick={handleReset}
-          className="w-full rounded-xl bg-white border border-slate-200 py-3 text-sm font-semibold text-slate-500 transition-all hover:bg-red-50 hover:text-red-600 hover:border-red-200"
-        >
-          Batalkan
-        </button>
+        {/* Amount + Status */}
+        {!loading && qrDataUrl && qrisStatus === "PENDING" && (
+          <div className="space-y-2">
+            <div className="rounded-xl bg-violet-50 border border-violet-200 px-4 py-3 text-center">
+              <p className="text-xs text-violet-500 font-medium">Total Pembayaran</p>
+              <p className="text-xl font-extrabold text-violet-700">{formatPrice(total)}</p>
+            </div>
+            <div className="flex items-center justify-center gap-2 rounded-xl bg-slate-50 border border-slate-200 px-4 py-2">
+              <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <p className="text-xs text-slate-500">
+                Menunggu pembayaran... ({pollingCount > 0 ? `cek ke-${pollingCount}` : "mulai"})
+              </p>
+            </div>
+            <p className="text-center text-xs text-slate-400">
+              Scan dengan QRIS-compatible e-wallet (GoPay, OVO, Dana, dll)
+            </p>
+          </div>
+        )}
+
+        {/* Action buttons */}
+        <div className="space-y-2">
+          {(qrisStatus === "EXPIRED" || qrisStatus === "FAILED") && (
+            <button
+              onClick={handleRefreshQRIS}
+              disabled={loading}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 py-3 text-sm font-bold text-white shadow-lg shadow-violet-200/50 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Buat QR Baru
+            </button>
+          )}
+          <button
+            onClick={handleReset}
+            className="w-full rounded-xl bg-white border border-slate-200 py-3 text-sm font-semibold text-slate-500 transition-all hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+          >
+            Batalkan
+          </button>
+        </div>
       </div>
     )
   }

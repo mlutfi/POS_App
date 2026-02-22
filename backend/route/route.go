@@ -99,6 +99,7 @@ func (c *RouteConfig) SaleRoutes(router fiber.Router) {
 	saleGroup.Get("/:id", c.SaleHandler.GetByID)
 	saleGroup.Post("/:id/pay-cash", c.SaleHandler.PayCash)
 	saleGroup.Post("/:id/pay-qris", c.SaleHandler.PayQRIS)
+	saleGroup.Get("/:id/qris-status", c.SaleHandler.GetQRISStatus)
 }
 
 func (c *RouteConfig) UserRoutes(router fiber.Router) {

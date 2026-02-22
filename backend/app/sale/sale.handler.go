@@ -11,6 +11,7 @@ type SaleHandler interface {
 	GetByID(ctx *fiber.Ctx) error
 	PayCash(ctx *fiber.Ctx) error
 	PayQRIS(ctx *fiber.Ctx) error
+	GetQRISStatus(ctx *fiber.Ctx) error
 	GetDailyReport(ctx *fiber.Ctx) error
 }
 
@@ -66,6 +67,15 @@ func (h *saleHandler) PayQRIS(ctx *fiber.Ctx) error {
 		return helper.BadRequestResponse(ctx, err.Error())
 	}
 	return helper.SuccessResponse(ctx, sale)
+}
+
+func (h *saleHandler) GetQRISStatus(ctx *fiber.Ctx) error {
+	id := ctx.Params("id")
+	status, err := h.UseCase.GetQRISStatus(ctx.Context(), id)
+	if err != nil {
+		return helper.BadRequestResponse(ctx, err.Error())
+	}
+	return helper.SuccessResponse(ctx, status)
 }
 
 func (h *saleHandler) GetDailyReport(ctx *fiber.Ctx) error {

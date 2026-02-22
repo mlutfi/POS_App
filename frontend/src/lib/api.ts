@@ -238,8 +238,13 @@ export const salesApi = {
     await api.post(`/sales/${id}/pay-cash`, { amount })
   },
 
-  payQRIS: async (id: string): Promise<{ qrisUrl: string }> => {
+  payQRIS: async (id: string): Promise<{ id: string; qrisUrl: string | null; providerRef: string | null; status: string }> => {
     const response = await api.post(`/sales/${id}/pay-qris`)
+    return response.data.data
+  },
+
+  getQRISStatus: async (saleId: string): Promise<{ paymentId: string; saleId: string; status: string; transactionId: string }> => {
+    const response = await api.get(`/sales/${saleId}/qris-status`)
     return response.data.data
   },
 

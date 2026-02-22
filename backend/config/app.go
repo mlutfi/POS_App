@@ -40,7 +40,7 @@ func Bootstrap(config *BootstrapConfig) {
 	authUseCase := auth.NewAuthUseCase(config.DB, authRepository, config.Config)
 	productUseCase := product.NewProductUseCase(config.DB, productRepository)
 	categoryUseCase := category.NewCategoryUseCase(config.DB, categoryRepository)
-	saleUseCase := sale.NewSaleUseCase(config.DB, saleRepository)
+	saleUseCase := sale.NewSaleUseCase(config.DB, saleRepository, config.Config)
 	userUseCase := user.NewUserUseCase(config.DB, userRepository)
 	reportUseCase := report.NewReportUseCase(config.DB, reportRepository)
 	stockUseCase := stock.NewStockUseCase(config.DB, stockRepository)

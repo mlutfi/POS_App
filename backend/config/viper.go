@@ -31,6 +31,7 @@ func NewViper() *viper.Viper {
 	config.SetDefault("database.connection_limit", 5)
 	config.SetDefault("jwt.secret", "your-secret-key-change-in-production")
 	config.SetDefault("jwt.expiration", 24)
+	config.SetDefault("midtrans.env", "sandbox")
 
 	// Bind environment variables
 	config.BindEnv("web.port", "PORT")
@@ -47,6 +48,10 @@ func NewViper() *viper.Viper {
 	config.BindEnv("database.connection_limit", "DB_CONNECTION_LIMIT")
 	config.BindEnv("jwt.secret", "JWT_SECRET")
 	config.BindEnv("jwt.expiration", "JWT_EXPIRATION")
+	config.BindEnv("midtrans.merchant_id", "MIDTRANS_MERCHANT_ID")
+	config.BindEnv("midtrans.client_key", "MIDTRANS_CLIENT_KEY")
+	config.BindEnv("midtrans.server_key", "MIDTRANS_SERVER_KEY")
+	config.BindEnv("midtrans.env", "MIDTRANS_ENV")
 
 	// Set from environment if available
 	if port := os.Getenv("PORT"); port != "" {
@@ -69,6 +74,18 @@ func NewViper() *viper.Viper {
 	}
 	if jwtSecret := os.Getenv("JWT_SECRET"); jwtSecret != "" {
 		config.Set("jwt.secret", jwtSecret)
+	}
+	if midtransServerKey := os.Getenv("MIDTRANS_SERVER_KEY"); midtransServerKey != "" {
+		config.Set("midtrans.server_key", midtransServerKey)
+	}
+	if midtransClientKey := os.Getenv("MIDTRANS_CLIENT_KEY"); midtransClientKey != "" {
+		config.Set("midtrans.client_key", midtransClientKey)
+	}
+	if midtransMerchantID := os.Getenv("MIDTRANS_MERCHANT_ID"); midtransMerchantID != "" {
+		config.Set("midtrans.merchant_id", midtransMerchantID)
+	}
+	if midtransEnv := os.Getenv("MIDTRANS_ENV"); midtransEnv != "" {
+		config.Set("midtrans.env", midtransEnv)
 	}
 
 	return config

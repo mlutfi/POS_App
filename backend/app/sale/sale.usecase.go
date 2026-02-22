@@ -3,10 +3,14 @@ package sale
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"pos_backend/entity"
 
+	"github.com/midtrans/midtrans-go"
+	"github.com/midtrans/midtrans-go/coreapi"
+	"github.com/spf13/viper"
 	"gorm.io/gorm"
 )
 
@@ -15,19 +19,38 @@ type SaleUseCase interface {
 	GetByID(ctx context.Context, id string) (*SaleResponse, error)
 	PayCash(ctx context.Context, id string, request *PayCashRequest) (*PaymentResponse, error)
 	PayQRIS(ctx context.Context, id string) (*PaymentResponse, error)
+	GetQRISStatus(ctx context.Context, saleId string) (*QRISStatusResponse, error)
 	GetDailyReport(ctx context.Context, date string) (*DailyReportResponse, error)
 }
 
 type saleUseCase struct {
 	DB         *gorm.DB
 	Repository SaleRepository
+	Config     *viper.Viper
 }
 
-func NewSaleUseCase(db *gorm.DB, repository SaleRepository) SaleUseCase {
+func NewSaleUseCase(db *gorm.DB, repository SaleRepository, config *viper.Viper) SaleUseCase {
 	return &saleUseCase{
 		DB:         db,
 		Repository: repository,
+		Config:     config,
 	}
+}
+
+func (u *saleUseCase) newMidtransClient() coreapi.Client {
+	serverKey := u.Config.GetString("midtrans.server_key")
+	midtransEnv := u.Config.GetString("midtrans.env")
+
+	var mtEnv midtrans.EnvironmentType
+	if midtransEnv == "production" {
+		mtEnv = midtrans.Production
+	} else {
+		mtEnv = midtrans.Sandbox
+	}
+
+	c := coreapi.Client{}
+	c.New(serverKey, mtEnv)
+	return c
 }
 
 func (u *saleUseCase) Create(ctx context.Context, cashierId string, request *CreateSaleRequest) (*SaleResponse, error) {
@@ -147,14 +170,63 @@ func (u *saleUseCase) PayQRIS(ctx context.Context, id string) (*PaymentResponse,
 		return nil, errors.New("sale is not pending")
 	}
 
-	qrisUrl := "https://sandbox.midtrans.com/qris/" + sale.ID
+	// Check if there's already a pending QRIS payment
+	var existingPayment entity.Payment
+	if result := u.DB.Where("sale_id = ? AND method = ? AND status = ?", sale.ID, entity.PaymentMethodQRIS, entity.PaymentStatusPending).First(&existingPayment); result.Error == nil {
+		// Return existing pending QRIS payment
+		return &PaymentResponse{
+			ID:          existingPayment.ID,
+			SaleID:      existingPayment.SaleID,
+			Method:      string(existingPayment.Method),
+			Provider:    string(existingPayment.Provider),
+			Amount:      existingPayment.Amount,
+			Status:      string(existingPayment.Status),
+			QRISUrl:     existingPayment.QRISUrl,
+			ProviderRef: existingPayment.ProviderRef,
+			CreatedAt:   existingPayment.CreatedAt.Format(time.RFC3339),
+		}, nil
+	}
+
+	c := u.newMidtransClient()
+
+	// Create QRIS charge request
+	chargeReq := &coreapi.ChargeReq{
+		PaymentType: coreapi.PaymentTypeQris,
+		TransactionDetails: midtrans.TransactionDetails{
+			OrderID:  fmt.Sprintf("SALE-%s", sale.ID),
+			GrossAmt: int64(sale.Total),
+		},
+		Qris: &coreapi.QrisDetails{
+			Acquirer: "gopay",
+		},
+	}
+
+	chargeRes, midtransErr := c.ChargeTransaction(chargeReq)
+	if midtransErr != nil {
+		return nil, fmt.Errorf("midtrans charge failed: %s", midtransErr.GetMessage())
+	}
+
+	// Extract QR code string from response
+	qrisUrl := chargeRes.QRString
+	if qrisUrl == "" {
+		for _, action := range chargeRes.Actions {
+			if action.Name == "generate-qr-code" {
+				qrisUrl = action.URL
+				break
+			}
+		}
+	}
+
+	providerRef := chargeRes.TransactionID
+
 	payment := &entity.Payment{
-		SaleID:   sale.ID,
-		Method:   entity.PaymentMethodQRIS,
-		Provider: entity.PaymentProviderMidtrans,
-		Amount:   sale.Total,
-		Status:   entity.PaymentStatusPending,
-		QRISUrl:  &qrisUrl,
+		SaleID:      sale.ID,
+		Method:      entity.PaymentMethodQRIS,
+		Provider:    entity.PaymentProviderMidtrans,
+		Amount:      sale.Total,
+		Status:      entity.PaymentStatusPending,
+		QRISUrl:     &qrisUrl,
+		ProviderRef: &providerRef,
 	}
 
 	err = u.Repository.CreatePayment(ctx, payment)
@@ -163,14 +235,103 @@ func (u *saleUseCase) PayQRIS(ctx context.Context, id string) (*PaymentResponse,
 	}
 
 	return &PaymentResponse{
-		ID:        payment.ID,
-		SaleID:    payment.SaleID,
-		Method:    string(payment.Method),
-		Provider:  string(payment.Provider),
-		Amount:    payment.Amount,
-		Status:    string(payment.Status),
-		QRISUrl:   payment.QRISUrl,
-		CreatedAt: payment.CreatedAt.Format(time.RFC3339),
+		ID:          payment.ID,
+		SaleID:      payment.SaleID,
+		Method:      string(payment.Method),
+		Provider:    string(payment.Provider),
+		Amount:      payment.Amount,
+		Status:      string(payment.Status),
+		QRISUrl:     payment.QRISUrl,
+		ProviderRef: payment.ProviderRef,
+		CreatedAt:   payment.CreatedAt.Format(time.RFC3339),
+	}, nil
+}
+
+func (u *saleUseCase) GetQRISStatus(ctx context.Context, saleId string) (*QRISStatusResponse, error) {
+	// Find pending QRIS payment for this sale
+	var payment entity.Payment
+	if err := u.DB.Where("sale_id = ? AND method = ?", saleId, entity.PaymentMethodQRIS).
+		Order("created_at DESC").First(&payment).Error; err != nil {
+		return nil, errors.New("no QRIS payment found for this sale")
+	}
+
+	// If already paid/expired, return cached status
+	if payment.Status != entity.PaymentStatusPending {
+		return &QRISStatusResponse{
+			PaymentID: payment.ID,
+			SaleID:    payment.SaleID,
+			Status:    string(payment.Status),
+			TransactionID: func() string {
+				if payment.ProviderRef != nil {
+					return *payment.ProviderRef
+				}
+				return ""
+			}(),
+		}, nil
+	}
+
+	// Check status from Midtrans
+	if payment.ProviderRef == nil {
+		return nil, errors.New("no provider reference found for this payment")
+	}
+
+	c := u.newMidtransClient()
+	statusRes, midtransErr := c.CheckTransaction(*payment.ProviderRef)
+	if midtransErr != nil {
+		return nil, fmt.Errorf("failed to check midtrans status: %s", midtransErr.GetMessage())
+	}
+
+	// Map Midtrans transaction status to our status
+	var newStatus entity.PaymentStatus
+	transactionStatus := statusRes.TransactionStatus
+	fraudStatus := statusRes.FraudStatus
+
+	switch transactionStatus {
+	case "settlement", "capture":
+		if fraudStatus == "accept" || fraudStatus == "" {
+			newStatus = entity.PaymentStatusPaid
+		} else {
+			newStatus = entity.PaymentStatusFailed
+		}
+	case "expire":
+		newStatus = entity.PaymentStatusExpired
+	case "cancel", "deny":
+		newStatus = entity.PaymentStatusFailed
+	default:
+		newStatus = entity.PaymentStatusPending
+	}
+
+	// Update payment status if changed
+	if newStatus != entity.PaymentStatusPending && newStatus != payment.Status {
+		payment.Status = newStatus
+		u.DB.Save(&payment)
+
+		// If paid, mark sale as paid and deduct inventory
+		if newStatus == entity.PaymentStatusPaid {
+			var sale entity.Sale
+			if err := u.DB.Preload("Items").First(&sale, "id = ?", saleId).Error; err == nil {
+				sale.Status = entity.SaleStatusPaid
+				u.DB.Save(&sale)
+
+				for _, item := range sale.Items {
+					u.DB.Exec("UPDATE inventories SET qty_on_hand = qty_on_hand - ?, updated_at = NOW() WHERE product_id = ?", item.Qty, item.ProductID)
+					movement := &entity.StockMovement{
+						ProductID: item.ProductID,
+						Type:      entity.StockMovementTypeSale,
+						QtyDelta:  -item.Qty,
+						RefSaleID: &sale.ID,
+					}
+					u.DB.Create(movement)
+				}
+			}
+		}
+	}
+
+	return &QRISStatusResponse{
+		PaymentID:     payment.ID,
+		SaleID:        payment.SaleID,
+		Status:        string(newStatus),
+		TransactionID: statusRes.TransactionID,
 	}, nil
 }
 

@@ -35,14 +35,22 @@ type SaleResponse struct {
 }
 
 type PaymentResponse struct {
-	ID        string  `json:"id"`
-	SaleID    string  `json:"saleId"`
-	Method    string  `json:"method"`
-	Provider  string  `json:"provider"`
-	Amount    int     `json:"amount"`
-	Status    string  `json:"status"`
-	QRISUrl   *string `json:"qrisUrl"`
-	CreatedAt string  `json:"createdAt"`
+	ID          string  `json:"id"`
+	SaleID      string  `json:"saleId"`
+	Method      string  `json:"method"`
+	Provider    string  `json:"provider"`
+	Amount      int     `json:"amount"`
+	Status      string  `json:"status"`
+	QRISUrl     *string `json:"qrisUrl"`
+	ProviderRef *string `json:"providerRef"`
+	CreatedAt   string  `json:"createdAt"`
+}
+
+type QRISStatusResponse struct {
+	PaymentID     string `json:"paymentId"`
+	SaleID        string `json:"saleId"`
+	Status        string `json:"status"` // PENDING | PAID | EXPIRED | FAILED
+	TransactionID string `json:"transactionId"`
 }
 
 type DailyReportResponse struct {
