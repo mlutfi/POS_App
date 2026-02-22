@@ -14,10 +14,13 @@ import {
     Users,
     Package,
     Sparkles,
+    PanelLeftClose,
+    PanelLeftOpen,
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { useState } from "react"
 
 const navItems = [
     {
@@ -99,6 +102,7 @@ export function AppSidebar() {
     const pathname = usePathname()
     const user = useAuthStore((state) => state.user)
     const logout = useAuthStore((state) => state.logout)
+    const [collapsed, setCollapsed] = useState(false)
 
     const handleLogout = () => {
         logout()
@@ -116,24 +120,64 @@ export function AppSidebar() {
     }
 
     return (
-        <aside className="flex h-screen w-64 flex-col bg-white border-r border-slate-100 shrink-0 shadow-[1px_0_12px_0_rgba(0,0,0,0.04)]">
+        <aside
+            className={cn(
+                "flex h-screen flex-col bg-white border-r border-slate-100 shrink-0 shadow-[1px_0_12px_0_rgba(0,0,0,0.04)] transition-all duration-300 ease-in-out",
+                collapsed ? "w-[68px]" : "w-64"
+            )}
+        >
+            {/* ── Logo / Brand + Toggle ── */}
+            <div className={cn(
+                "flex h-16 items-center border-b border-slate-100 shrink-0",
+                collapsed ? "justify-center px-0" : "justify-between px-4"
+            )}>
+                {!collapsed && (
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-200/60 shrink-0">
+                            <Sparkles className="h-[18px] w-[18px] text-white" />
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-sm font-bold text-slate-800 leading-tight truncate">POS Admin</p>
+                            <p className="text-[10px] text-slate-400 leading-tight mt-0.5">Management Panel</p>
+                        </div>
+                    </div>
+                )}
 
-            {/* ── Logo / Brand ── */}
-            <div className="flex h-16 items-center gap-3 px-5 border-b border-slate-100">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-200/60 shrink-0">
-                    <Sparkles className="h-[18px] w-[18px] text-white" />
-                </div>
-                <div>
-                    <p className="text-sm font-bold text-slate-800 leading-tight">POS Admin</p>
-                    <p className="text-[10px] text-slate-400 leading-tight mt-0.5">Management Panel</p>
-                </div>
+                {collapsed && (
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-200/60">
+                        <Sparkles className="h-[18px] w-[18px] text-white" />
+                    </div>
+                )}
+
+                {!collapsed && (
+                    <button
+                        onClick={() => setCollapsed(true)}
+                        title="Collapse sidebar"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-600"
+                    >
+                        <PanelLeftClose className="h-4 w-4" />
+                    </button>
+                )}
             </div>
 
+            {/* Expand button when collapsed */}
+            {collapsed && (
+                <button
+                    onClick={() => setCollapsed(false)}
+                    title="Expand sidebar"
+                    className="mx-auto mt-3 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-all hover:bg-slate-100 hover:text-indigo-500"
+                >
+                    <PanelLeftOpen className="h-4 w-4" />
+                </button>
+            )}
+
             {/* ── Navigation ── */}
-            <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-                <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-                    Menu Utama
-                </p>
+            <nav className={cn("flex-1 overflow-y-auto py-4 space-y-1", collapsed ? "px-2" : "px-3")}>
+                {!collapsed && (
+                    <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                        Menu Utama
+                    </p>
+                )}
 
                 {navItems.map((item) => {
                     const active = isActive(item.href)
@@ -142,15 +186,17 @@ export function AppSidebar() {
                         <Link
                             key={item.href}
                             href={item.href}
+                            title={collapsed ? item.label : undefined}
                             className={cn(
-                                "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                                "group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200",
+                                collapsed ? "justify-center p-2" : "px-3 py-2.5",
                                 active
                                     ? `${item.activeBg} border border-slate-200/80 ${item.activeText}`
                                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                             )}
                         >
-                            {/* Active left border accent */}
-                            {active && (
+                            {/* Active left border accent — only in expanded mode */}
+                            {active && !collapsed && (
                                 <span className={cn(
                                     "absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full",
                                     item.activeBorder
@@ -158,7 +204,8 @@ export function AppSidebar() {
                             )}
 
                             <span className={cn(
-                                "flex h-7 w-7 items-center justify-center rounded-lg shrink-0 transition-all duration-200",
+                                "flex items-center justify-center rounded-lg shrink-0 transition-all duration-200",
+                                collapsed ? "h-9 w-9" : "h-7 w-7",
                                 active ? item.activeIconBg : item.iconBg
                             )}>
                                 <Icon className={cn(
@@ -167,16 +214,18 @@ export function AppSidebar() {
                                 )} />
                             </span>
 
-                            <span className="flex-1 truncate">{item.label}</span>
-
-                            {item.badge && (
-                                <Badge className="bg-rose-100 text-rose-500 border-rose-200 text-[9px] px-1.5 py-0 h-4 font-semibold hover:bg-rose-100">
-                                    {item.badge}
-                                </Badge>
-                            )}
-
-                            {active && (
-                                <ChevronRight className={cn("h-3.5 w-3.5 shrink-0", item.iconColor)} />
+                            {!collapsed && (
+                                <>
+                                    <span className="flex-1 truncate">{item.label}</span>
+                                    {item.badge && (
+                                        <Badge className="bg-rose-100 text-rose-500 border-rose-200 text-[9px] px-1.5 py-0 h-4 font-semibold hover:bg-rose-100">
+                                            {item.badge}
+                                        </Badge>
+                                    )}
+                                    {active && (
+                                        <ChevronRight className={cn("h-3.5 w-3.5 shrink-0", item.iconColor)} />
+                                    )}
+                                </>
                             )}
                         </Link>
                     )
@@ -184,44 +233,72 @@ export function AppSidebar() {
             </nav>
 
             {/* ── Divider ── */}
-            <div className="mx-4 h-px bg-slate-100" />
+            <div className="mx-3 h-px bg-slate-100" />
 
             {/* ── Go to POS ── */}
-            <div className="px-3 py-3">
+            <div className={cn("py-3", collapsed ? "px-2" : "px-3")}>
                 <button
                     onClick={() => router.push("/pos")}
-                    className="flex w-full items-center gap-3 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2.5 text-sm font-medium text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:border-indigo-200"
+                    title={collapsed ? "Buka POS" : undefined}
+                    className={cn(
+                        "flex w-full items-center rounded-xl border border-indigo-100 bg-indigo-50 text-sm font-medium text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:border-indigo-200",
+                        collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5"
+                    )}
                 >
                     <ShoppingCart className="h-4 w-4 shrink-0" />
-                    <span className="flex-1 text-left">Buka POS</span>
-                    <ChevronRight className="h-3.5 w-3.5" />
+                    {!collapsed && (
+                        <>
+                            <span className="flex-1 text-left">Buka POS</span>
+                            <ChevronRight className="h-3.5 w-3.5" />
+                        </>
+                    )}
                 </button>
             </div>
 
             {/* ── User Footer ── */}
-            <div className="border-t border-slate-100 px-3 py-4">
-                <div className="flex items-center gap-3 rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5">
-                    <Avatar className="h-8 w-8 shrink-0">
-                        <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs font-bold">
-                            {initials(user?.name)}
-                        </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-800 truncate leading-tight">
-                            {user?.name || "User"}
-                        </p>
-                        <p className="text-[10px] text-slate-400 truncate mt-0.5 leading-tight">
-                            {user?.role || ""}
-                        </p>
+            <div className={cn(
+                "border-t border-slate-100 py-4",
+                collapsed ? "px-2" : "px-3"
+            )}>
+                {collapsed ? (
+                    <div className="flex flex-col items-center gap-2">
+                        <Avatar className="h-9 w-9">
+                            <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs font-bold">
+                                {initials(user?.name)}
+                            </AvatarFallback>
+                        </Avatar>
+                        <button
+                            onClick={handleLogout}
+                            title="Keluar"
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-all hover:bg-red-50 hover:text-red-500"
+                        >
+                            <LogOut className="h-3.5 w-3.5" />
+                        </button>
                     </div>
-                    <button
-                        onClick={handleLogout}
-                        title="Keluar"
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-all hover:bg-red-50 hover:text-red-500"
-                    >
-                        <LogOut className="h-3.5 w-3.5" />
-                    </button>
-                </div>
+                ) : (
+                    <div className="flex items-center gap-3 rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5">
+                        <Avatar className="h-8 w-8 shrink-0">
+                            <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs font-bold">
+                                {initials(user?.name)}
+                            </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-slate-800 truncate leading-tight">
+                                {user?.name || "User"}
+                            </p>
+                            <p className="text-[10px] text-slate-400 truncate mt-0.5 leading-tight">
+                                {user?.role || ""}
+                            </p>
+                        </div>
+                        <button
+                            onClick={handleLogout}
+                            title="Keluar"
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-all hover:bg-red-50 hover:text-red-500"
+                        >
+                            <LogOut className="h-3.5 w-3.5" />
+                        </button>
+                    </div>
+                )}
             </div>
         </aside>
     )

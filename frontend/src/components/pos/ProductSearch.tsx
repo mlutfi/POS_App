@@ -2,41 +2,29 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { productsApi, Product } from "@/lib/api"
-import { Search, Package, Plus, AlertCircle } from "lucide-react"
+import { Search, Package, Plus, AlertCircle, X } from "lucide-react"
 import { useDebounce } from "@/hooks/use-debounce"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface ProductSearchProps {
   onSelect: (product: Product) => void
   categoryId?: string | null
 }
 
-// Helper to resolve image URL with backend base
 const getImageUrl = (url?: string | null) => {
-  if (!url) return "";
-
-  // Handle case where database stored malformed URL like "https:/pos..."
-  let path = url;
+  if (!url) return ""
+  let path = url
   if (path.startsWith("http")) {
-    if (path.startsWith("http://") || path.startsWith("https://")) {
-      return path;
-    }
-    // Extract path from malformed URL if matching /uploads/
-    const match = path.match(/\/uploads\/.*/);
-    if (match) {
-      path = match[0];
-    } else {
-      return path;
-    }
+    if (path.startsWith("http://") || path.startsWith("https://")) return path
+    const match = path.match(/\/uploads\/.*/)
+    if (match) path = match[0]
+    else return path
   }
-
-  // Get base URL from env or fallback
   const imageBase = process.env.NEXT_PUBLIC_IMAGE_URL ||
-    (process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace('/api', '') : 'http://localhost:3001');
-
-  // Ensure path starts with /
-  path = path.startsWith("/") ? path : `/${path}`;
-  return `${imageBase}${path}`;
-};
+    (process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace('/api', '') : 'http://localhost:3001')
+  path = path.startsWith("/") ? path : `/${path}`
+  return `${imageBase}${path}`
+}
 
 export function ProductSearch({ onSelect, categoryId }: ProductSearchProps) {
   const [query, setQuery] = useState("")
@@ -66,110 +54,110 @@ export function ProductSearch({ onSelect, categoryId }: ProductSearchProps) {
     }
   }, [debouncedQuery, categoryId])
 
-  useEffect(() => {
-    fetchProducts()
-  }, [fetchProducts])
+  useEffect(() => { fetchProducts() }, [fetchProducts])
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(price)
-  }
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(price)
 
   return (
-    <div className="space-y-4">
-      {/* Search Input */}
-      <div className="relative">
-        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" />
+    <div className="flex flex-col h-full gap-3">
+      {/* Search Bar */}
+      <div className="relative group shrink-0">
+        <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-orange-400" />
         <input
           type="text"
-          placeholder="Cari produk (min. 2 karakter)..."
+          placeholder="Cari produk..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full rounded-xl bg-slate-50 border border-slate-200 py-3 pl-11 pr-4 text-sm text-slate-700 placeholder-slate-300 outline-none transition-all duration-200 focus:border-amber-400 focus:bg-white focus:ring-2 focus:ring-amber-100 focus:shadow-sm"
+          className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-10 text-sm text-slate-700 placeholder-slate-400 outline-none transition-all focus:border-orange-300 focus:ring-2 focus:ring-orange-100 shadow-sm"
         />
+        {query && (
+          <button
+            onClick={() => setQuery("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-slate-300 hover:text-slate-500 transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
 
-      {/* Products Grid */}
-      {loading ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="rounded-2xl border border-slate-100 bg-white p-3 animate-pulse">
-              <div className="aspect-square rounded-xl bg-slate-100 animate-shimmer" />
-              <div className="mt-3 h-4 rounded-lg bg-slate-100" />
-              <div className="mt-2 h-3 w-2/3 rounded-lg bg-slate-100" />
-            </div>
-          ))}
-        </div>
-      ) : error ? (
-        <div className="rounded-2xl bg-red-50 border border-red-200 p-6 text-center animate-fade-in">
-          <div className="flex h-12 w-12 mx-auto items-center justify-center rounded-full bg-red-100">
-            <AlertCircle className="h-6 w-6 text-red-500" />
-          </div>
-          <p className="mt-3 text-sm text-red-600 font-medium">{error}</p>
-        </div>
-      ) : products.length === 0 ? (
-        <div className="rounded-2xl bg-white border border-slate-100 p-8 text-center animate-fade-in shadow-sm">
-          <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-full bg-slate-50 animate-float">
-            <Package className="h-8 w-8 text-slate-300" />
-          </div>
-          <p className="mt-4 text-sm font-medium text-slate-500">Tidak ada produk ditemukan</p>
-          <p className="mt-1 text-xs text-slate-400">Coba kata kunci lain atau ubah kategori</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {products.map((product, index) => (
-            <button
-              key={product.id}
-              onClick={() => onSelect(product)}
-              className="group rounded-2xl bg-white border border-slate-100 p-3 text-left transition-all duration-300 hover:shadow-lg hover:shadow-amber-100/50 hover:scale-[1.02] hover:border-amber-200 active:scale-[0.98] animate-fade-in"
-              style={{ animationDelay: `${index * 30}ms` }}
-            >
-              <div className="relative aspect-square overflow-hidden rounded-xl bg-slate-50">
-                {product.imageUrl ? (
-                  <img
-                    src={getImageUrl(product.imageUrl)}
-                    alt={product.name}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-                    <Package className="h-8 w-8 text-slate-300 transition-all group-hover:text-slate-400 group-hover:scale-110" />
-                  </div>
-                )}
-                {/* Hover add overlay */}
-                <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-all duration-300 group-hover:opacity-100 rounded-xl">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-300/40 transform scale-75 group-hover:scale-100 transition-transform duration-300">
-                    <Plus className="h-5 w-5 text-white" />
-                  </div>
-                </div>
-                {/* Low stock badge */}
-                {product.qtyOnHand !== undefined && product.qtyOnHand <= 5 && (
-                  <div className="absolute left-1.5 top-1.5 rounded-full bg-red-500 px-2 py-0.5 shadow-sm">
-                    <span className="text-[10px] font-bold text-white">Stok: {product.qtyOnHand}</span>
-                  </div>
-                )}
+      {/* Products — ScrollArea */}
+      <ScrollArea className="flex-1">
+        {loading ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 pr-3">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="rounded-2xl border border-slate-100 bg-white p-3 animate-pulse">
+                <div className="aspect-square rounded-xl bg-slate-100" />
+                <div className="mt-3 h-3.5 rounded-lg bg-slate-100" />
+                <div className="mt-2 h-3 w-2/3 rounded-lg bg-slate-100" />
               </div>
+            ))}
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 mb-3">
+              <AlertCircle className="h-6 w-6 text-red-400" />
+            </div>
+            <p className="text-sm font-medium text-red-500">{error}</p>
+          </div>
+        ) : products.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 mb-3">
+              <Package className="h-7 w-7 text-slate-300" />
+            </div>
+            <p className="text-sm font-medium text-slate-500">Tidak ada produk</p>
+            <p className="mt-1 text-xs text-slate-400">Coba kata kunci lain</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 pr-3">
+            {products.map((product) => (
+              <button
+                key={product.id}
+                onClick={() => onSelect(product)}
+                className="group relative rounded-2xl border border-slate-100 bg-white p-3 text-left transition-all duration-200 hover:border-orange-200 hover:shadow-md hover:shadow-orange-100/60 hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0"
+              >
+                <div className="relative aspect-square overflow-hidden rounded-xl bg-slate-50">
+                  {product.imageUrl ? (
+                    <img
+                      src={getImageUrl(product.imageUrl)}
+                      alt={product.name}
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+                      <Package className="h-8 w-8 text-slate-200 transition-all group-hover:text-slate-300" />
+                    </div>
+                  )}
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center bg-orange-500/20 opacity-0 transition-opacity duration-200 group-hover:opacity-100 rounded-xl">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-lg">
+                      <Plus className="h-4 w-4 text-orange-500" />
+                    </div>
+                  </div>
+                  {/* Low stock badge */}
+                  {product.qtyOnHand !== undefined && product.qtyOnHand <= 5 && (
+                    <div className="absolute left-1.5 top-1.5 rounded-full bg-rose-500 px-2 py-0.5">
+                      <span className="text-[9px] font-bold text-white">Stok: {product.qtyOnHand}</span>
+                    </div>
+                  )}
+                </div>
 
-              <div className="mt-3">
-                <h3 className="truncate text-sm font-semibold text-slate-800 group-hover:text-slate-900 transition-colors">
-                  {product.name}
-                </h3>
-                <p className="mt-0.5 text-[11px] text-slate-400 font-medium">
-                  {product.category || "Tanpa Kategori"}
-                </p>
-                <div className="mt-2 inline-block rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 px-2.5 py-1">
-                  <p className="text-xs font-bold text-amber-700">
+                <div className="mt-2.5">
+                  <h3 className="truncate text-[13px] font-semibold text-slate-800 leading-tight">
+                    {product.name}
+                  </h3>
+                  {product.category && (
+                    <p className="mt-0.5 truncate text-[10px] text-slate-400">{product.category}</p>
+                  )}
+                  <p className="mt-1.5 text-xs font-bold text-orange-500">
                     {formatPrice(product.price)}
                   </p>
                 </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
+              </button>
+            ))}
+          </div>
+        )}
+      </ScrollArea>
     </div>
   )
 }

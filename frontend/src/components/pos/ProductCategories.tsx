@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { categoriesApi, Category } from "@/lib/api"
-import { Grid, Loader2, Sparkles } from "lucide-react"
+import { Loader2, LayoutGrid } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface ProductCategoriesProps {
   activeCategory: string | null
@@ -29,36 +30,37 @@ export function ProductCategories({ activeCategory, onSelect }: ProductCategorie
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 py-2">
-        <Loader2 className="h-4 w-4 animate-spin text-amber-500" />
-        <span className="text-sm text-slate-400">Memuat kategori...</span>
+      <div className="flex items-center gap-2 py-1">
+        <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
+        <span className="text-xs text-slate-400">Memuat kategori...</span>
       </div>
     )
   }
 
   return (
-    <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
+    <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
       <button
         onClick={() => onSelect(null)}
-        className={`flex-shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all duration-200 ${activeCategory === null
-            ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-200/50 scale-105"
-            : "bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-slate-700 active:scale-95"
-          }`}
+        className={cn(
+          "flex-shrink-0 flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all duration-200",
+          activeCategory === null
+            ? "bg-orange-500 text-white shadow-sm shadow-orange-200"
+            : "bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
+        )}
       >
-        <span className="flex items-center gap-1.5">
-          <Sparkles className="h-3 w-3" />
-          Semua
-        </span>
+        <LayoutGrid className="h-3 w-3" />
+        Semua
       </button>
-      {categories.map((category, index) => (
+      {categories.map((category) => (
         <button
           key={category.id}
           onClick={() => onSelect(category.id)}
-          className={`flex-shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all duration-200 animate-fade-in ${activeCategory === category.id
-              ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-200/50 scale-105"
-              : "bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-slate-700 active:scale-95"
-            }`}
-          style={{ animationDelay: `${index * 50}ms` }}
+          className={cn(
+            "flex-shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all duration-200",
+            activeCategory === category.id
+              ? "bg-orange-500 text-white shadow-sm shadow-orange-200"
+              : "bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
+          )}
         >
           {category.name}
         </button>
