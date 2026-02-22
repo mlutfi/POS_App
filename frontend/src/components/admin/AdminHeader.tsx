@@ -2,28 +2,29 @@
 
 import React from "react"
 import { usePathname } from "next/navigation"
-import { SidebarTrigger } from "@/components/ui/sidebar"
-import { Separator } from "@/components/ui/separator"
 import {
     LayoutDashboard,
     Package,
     FolderTree,
     Users,
     BarChart3,
+    Box,
+    Layers,
+    TrendingUp,
 } from "lucide-react"
 
-const breadcrumbMap: Record<string, { label: string; icon: React.ElementType }> = {
-    "/admin": { label: "Dashboard", icon: LayoutDashboard },
-    "/admin/products": { label: "Produk", icon: Package },
-    "/admin/categories": { label: "Kategori", icon: FolderTree },
-    "/admin/users": { label: "Pengguna", icon: Users },
-    "/admin/reports": { label: "Laporan", icon: BarChart3 },
+const breadcrumbMap: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+    "/admin": { label: "Dashboard", icon: LayoutDashboard, color: "text-sky-500" },
+    "/admin/products": { label: "Produk", icon: Box, color: "text-violet-500" },
+    "/admin/categories": { label: "Kategori", icon: Layers, color: "text-indigo-500" },
+    "/admin/stock": { label: "Stok", icon: Package, color: "text-emerald-500" },
+    "/admin/users": { label: "Pengguna", icon: Users, color: "text-amber-500" },
+    "/admin/reports": { label: "Laporan", icon: TrendingUp, color: "text-rose-500" },
 }
 
 export function AdminHeader() {
     const pathname = usePathname()
 
-    // Find the best matching breadcrumb
     const currentPage = Object.entries(breadcrumbMap).find(([path]) => {
         if (path === "/admin") return pathname === "/admin"
         return pathname.startsWith(path)
@@ -31,15 +32,18 @@ export function AdminHeader() {
 
     const Icon = currentPage?.[1].icon
     const label = currentPage?.[1].label || "Admin"
+    const color = currentPage?.[1].color || "text-slate-500"
 
     return (
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-            <div className="flex items-center gap-2">
-                <SidebarTrigger className="-ml-1" />
-                <Separator orientation="vertical" className="mr-2 h-4" />
-                <div className="flex items-center gap-2">
-                    {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
-                    <span className="text-sm font-medium">{label}</span>
+        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-6 shadow-sm">
+            <div className="flex items-center gap-2.5">
+                {Icon && (
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100">
+                        <Icon className={`h-4 w-4 ${color}`} />
+                    </div>
+                )}
+                <div>
+                    <h1 className="text-sm font-semibold text-slate-800">{label}</h1>
                 </div>
             </div>
         </header>

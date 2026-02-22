@@ -53,6 +53,9 @@ func (c *RouteConfig) Setup() {
 	// Auth routes (public)
 	c.AuthRoutes(api)
 
+	// Midtrans webhook (public, no auth required)
+	api.Post("/sales/midtrans-notification", c.SaleHandler.MidtransNotification)
+
 	// Protected routes
 	protected := api.Group("/", c.AuthMiddleware)
 	c.ProductRoutes(protected)
@@ -99,6 +102,7 @@ func (c *RouteConfig) SaleRoutes(router fiber.Router) {
 	saleGroup.Get("/:id", c.SaleHandler.GetByID)
 	saleGroup.Post("/:id/pay-cash", c.SaleHandler.PayCash)
 	saleGroup.Post("/:id/pay-qris", c.SaleHandler.PayQRIS)
+	saleGroup.Post("/:id/snap", c.SaleHandler.GenerateSnapToken)
 	saleGroup.Get("/:id/qris-status", c.SaleHandler.GetQRISStatus)
 }
 

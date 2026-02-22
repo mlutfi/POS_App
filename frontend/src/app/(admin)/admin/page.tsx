@@ -14,6 +14,22 @@ import {
   RefreshCw,
 } from "lucide-react"
 
+// Helper to resolve image URL with backend base (same as products page)
+const getImageUrl = (url?: string | null) => {
+  if (!url) return ""
+  let path = url
+  if (path.startsWith("http")) {
+    if (path.startsWith("http://") || path.startsWith("https://")) return path
+    const match = path.match(/\/uploads\/.*/)
+    if (match) path = match[0]
+    else return path
+  }
+  const imageBase = process.env.NEXT_PUBLIC_IMAGE_URL ||
+    (process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace('/api', '') : 'http://localhost:3001')
+  path = path.startsWith("/") ? path : `/${path}`
+  return `${imageBase}${path}`
+}
+
 interface DashboardStats {
   totalRevenue: number
   totalSales: number
@@ -258,7 +274,7 @@ export default function AdminDashboard() {
                   </span>
                   {product.imageUrl ? (
                     <img
-                      src={product.imageUrl.startsWith('http') ? product.imageUrl : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:3001'}${product.imageUrl}`}
+                      src={getImageUrl(product.imageUrl)}
                       alt={product.productName}
                       className="h-10 w-10 shrink-0 rounded-lg object-cover border border-slate-200"
                     />

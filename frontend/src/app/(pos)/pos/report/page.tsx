@@ -28,13 +28,29 @@ type TabType = "sales" | "stock"
 // Helper to resolve image URL with backend base
 const getImageUrl = (url?: string | null) => {
     if (!url) return "";
-    if (url.startsWith("http")) return url;
 
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-    const baseUrl = apiBase.replace('/api', '');
+    // Handle case where database stored malformed URL like "https:/pos..."
+    let path = url;
+    if (path.startsWith("http")) {
+        if (path.startsWith("http://") || path.startsWith("https://")) {
+            return path;
+        }
+        // Extract path from malformed URL if matching /uploads/
+        const match = path.match(/\/uploads\/.*/);
+        if (match) {
+            path = match[0];
+        } else {
+            return path;
+        }
+    }
 
-    const path = url.startsWith("/") ? url : `/${url}`;
-    return `${baseUrl}${path}`;
+    // Get base URL from env or fallback
+    const imageBase = process.env.NEXT_PUBLIC_IMAGE_URL ||
+        (process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace('/api', '') : 'http://localhost:3001');
+
+    // Ensure path starts with /
+    path = path.startsWith("/") ? path : `/${path}`;
+    return `${imageBase}${path}`;
 };
 
 export default function PosReportPage() {

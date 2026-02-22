@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { salesApi, Sale } from "@/lib/api"
 import { useToast } from "@/components/ui/use-toast"
-import { Banknote, QrCode, Loader2, CheckCircle, XCircle, Sparkles, ArrowRight, Printer, RefreshCw, AlertCircle } from "lucide-react"
+import { Banknote, QrCode, Loader2, CheckCircle, XCircle, Sparkles, ArrowRight, Printer, RefreshCw, AlertCircle, Clock, ChevronDown, ChevronUp, Info } from "lucide-react"
 import { createPortal } from "react-dom"
 import { ReceiptModal } from "./ReceiptModal"
 import QRCode from "qrcode"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface CartItem {
   productId: string
@@ -54,6 +55,38 @@ export function PaymentPanel({
   const [pollingCount, setPollingCount] = useState(0)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // Countdown timer state (900s = 15 minutes, standard Midtrans QRIS)
+  const QRIS_DURATION = 900
+  const [qrisCountdown, setQrisCountdown] = useState<number | null>(null)
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Snap State
+  const [isSnapLoading, setIsSnapLoading] = useState(false)
+
+  // Load Midtrans Snap Script
+  useEffect(() => {
+    // We can use sandbox url for now or config it. Midtrans Sandbox is app.sandbox.midtrans.com/snap/snap.js
+    const snapScriptUrl = "https://app.sandbox.midtrans.com/snap/snap.js";
+    // Usually you'd put the client key here, but it's optional for snap.pay(token)
+    // const myMidtransClientKey = "...";
+
+    let scriptTag = document.getElementById("midtrans-script");
+    if (!scriptTag) {
+      scriptTag = document.createElement("script");
+      scriptTag.id = "midtrans-script";
+      scriptTag.setAttribute("src", snapScriptUrl);
+      // scriptTag.setAttribute("data-client-key", myMidtransClientKey); 
+      document.body.appendChild(scriptTag);
+    }
+
+    return () => {
+      // Optional: cleanup script if we unmount
+    }
+  }, [])
+
+  // Midtrans response info box
+  const [showMidtransInfo, setShowMidtransInfo] = useState(false)
+
   // Ensure portals only render on client
   if (typeof window !== "undefined" && !mounted) {
     setMounted(true)
@@ -73,6 +106,36 @@ export function PaymentPanel({
       console.error("Failed to generate QR code:", err)
     }
   }, [])
+
+  /** Format seconds into MM:SS */
+  const formatCountdown = useMemo(() => (seconds: number) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, "0")
+    const s = (seconds % 60).toString().padStart(2, "0")
+    return `${m}:${s}`
+  }, [])
+
+  /** Start 15-min countdown timer */
+  const startCountdown = useCallback(() => {
+    if (countdownRef.current) clearInterval(countdownRef.current)
+    setQrisCountdown(QRIS_DURATION)
+    countdownRef.current = setInterval(() => {
+      setQrisCountdown((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(countdownRef.current!)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }, [])
+
+  /** Auto-expire when countdown hits 0 */
+  useEffect(() => {
+    if (qrisCountdown === 0 && qrisStatus === "PENDING") {
+      if (pollingRef.current) clearInterval(pollingRef.current)
+      setQrisStatus("EXPIRED")
+    }
+  }, [qrisCountdown, qrisStatus])
 
   /** Start polling Midtrans for QRIS payment status */
   const startPolling = useCallback((saleId: string) => {
@@ -103,10 +166,11 @@ export function PaymentPanel({
     }, 3000) // Poll every 3 seconds
   }, [onPaidSuccess, toast])
 
-  // Clean up polling on unmount
+  // Clean up polling and countdown on unmount
   useEffect(() => {
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current)
+      if (countdownRef.current) clearInterval(countdownRef.current)
     }
   }, [])
 
@@ -188,13 +252,15 @@ export function PaymentPanel({
       setQrisData(result)
       setQrisStatus("PENDING")
       setPollingCount(0)
+      setShowMidtransInfo(false)
 
       if (result.qrisUrl) {
         await generateQrDataUrl(result.qrisUrl)
       }
 
-      // Start polling for payment status
+      // Start polling and countdown
       startPolling(currentSale.id)
+      startCountdown()
 
       toast({
         title: "QR Code Siap",
@@ -209,6 +275,49 @@ export function PaymentPanel({
       setPaymentMethod(null)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSnapPayment = async () => {
+    if (!sale) return
+    setIsSnapLoading(true)
+    try {
+      const result = await salesApi.generateSnapToken(sale.id)
+
+      // Stop QRIS polling if it was running since we're opening Snap
+      if (pollingRef.current) clearInterval(pollingRef.current)
+      if (countdownRef.current) clearInterval(countdownRef.current)
+
+      // @ts-ignore
+      window.snap.pay(result.token, {
+        onSuccess: function (r: any) {
+          // Snap success
+          setShowSuccess(true)
+          setQrisStatus("PAID")
+          toast({ title: "Pembayaran Berhasil", description: "Terima kasih!" })
+          onPaidSuccess()
+        },
+        onPending: function (r: any) {
+          toast({ title: "Pembayaran Tertunda", description: "Selesaikan pembayaran Anda." })
+          // Optionally restart polling if they close it, or just let them re-click
+        },
+        onError: function (r: any) {
+          toast({ title: "Pembayaran Gagal", description: "Terjadi kesalahan pada Snap", variant: "destructive" })
+        },
+        onClose: function () {
+          // Restart QRIS polling just in case they closed it to scan the QR instead
+          startPolling(sale.id)
+          startCountdown()
+        }
+      })
+    } catch (error: any) {
+      toast({
+        title: "Error Midtrans Snap",
+        description: error.response?.data?.message || "Gagal membuka Snap",
+        variant: "destructive"
+      })
+    } finally {
+      setIsSnapLoading(false)
     }
   }
 
@@ -227,18 +336,23 @@ export function PaymentPanel({
 
   const handleReset = () => {
     if (pollingRef.current) clearInterval(pollingRef.current)
+    if (countdownRef.current) clearInterval(countdownRef.current)
     setPaymentMethod(null)
     setCashAmount("")
     setShowSuccess(false)
     setQrisData(null)
     setQrDataUrl(null)
     setQrisStatus("PENDING")
+    setQrisCountdown(null)
+    setShowMidtransInfo(false)
     onClear()
   }
 
   const handleRefreshQRIS = async () => {
     if (!sale) return
     if (pollingRef.current) clearInterval(pollingRef.current)
+    if (countdownRef.current) clearInterval(countdownRef.current)
+    setQrisCountdown(null)
     await handleQRISPayment(sale)
   }
 
@@ -432,101 +546,181 @@ export function PaymentPanel({
     )
   }
 
-  // ===== QRIS Payment Flow =====
-  if (paymentMethod === "qris") {
-    return (
-      <div className="space-y-4 animate-fade-in">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-slate-700">Pembayaran QRIS</h3>
-          <button
-            onClick={() => setPaymentMethod(null)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 border border-slate-200 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-600"
-          >
-            <XCircle className="h-4 w-4" />
-          </button>
-        </div>
+  // ===== QRIS Payment Modal (portal, centered) =====
+  const qrisModal = paymentMethod === "qris" && mounted ? createPortal(
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 animate-fade-in">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={qrisStatus === "PENDING" ? undefined : handleReset}
+      />
 
-        {/* QR Code Area */}
-        <div className="flex flex-col items-center justify-center">
-          {loading ? (
-            <div className="flex h-48 w-48 flex-col items-center justify-center rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200">
-              <Loader2 className="h-8 w-8 text-violet-400 animate-spin" />
-              <p className="mt-2 text-xs text-slate-400">Membuat QR Code...</p>
-            </div>
-          ) : qrisStatus === "EXPIRED" || qrisStatus === "FAILED" ? (
-            <div className="flex h-48 w-48 flex-col items-center justify-center rounded-2xl bg-red-50 border-2 border-dashed border-red-200">
-              <AlertCircle className="h-10 w-10 text-red-400" />
-              <p className="mt-2 text-xs font-semibold text-red-500">
-                {qrisStatus === "EXPIRED" ? "QR Code Kedaluwarsa" : "Pembayaran Gagal"}
-              </p>
-            </div>
-          ) : qrDataUrl ? (
-            <div className="relative">
-              {/* QR code image */}
-              <div className="rounded-2xl overflow-hidden border-4 border-violet-100 shadow-lg shadow-violet-100/50 p-2 bg-white">
-                <img
-                  src={qrDataUrl}
-                  alt="QRIS Payment QR Code"
-                  width={200}
-                  height={200}
-                  className="rounded-xl"
-                />
-              </div>
-              {/* QRIS badge */}
-              <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 px-3 py-1 shadow-lg">
-                <QrCode className="h-3 w-3 text-white" />
-                <span className="text-xs font-bold text-white">QRIS</span>
-              </div>
-            </div>
-          ) : (
-            <div className="flex h-48 w-48 flex-col items-center justify-center rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200">
-              <QrCode className="h-12 w-12 text-slate-300" />
-              <p className="mt-2 text-xs text-slate-400">QR tidak tersedia</p>
-            </div>
-          )}
-        </div>
-
-        {/* Amount + Status */}
-        {!loading && qrDataUrl && qrisStatus === "PENDING" && (
-          <div className="space-y-2">
-            <div className="rounded-xl bg-violet-50 border border-violet-200 px-4 py-3 text-center">
-              <p className="text-xs text-violet-500 font-medium">Total Pembayaran</p>
-              <p className="text-xl font-extrabold text-violet-700">{formatPrice(total)}</p>
-            </div>
-            <div className="flex items-center justify-center gap-2 rounded-xl bg-slate-50 border border-slate-200 px-4 py-2">
-              <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <p className="text-xs text-slate-500">
-                Menunggu pembayaran... ({pollingCount > 0 ? `cek ke-${pollingCount}` : "mulai"})
-              </p>
-            </div>
-            <p className="text-center text-xs text-slate-400">
-              Scan dengan QRIS-compatible e-wallet (GoPay, OVO, Dana, dll)
-            </p>
+      {/* Modal Card */}
+      <ScrollArea className="relative w-full max-w-sm rounded-3xl bg-white shadow-2xl overflow-hidden max-h-[90vh] animate-scale-in">
+        {/* Header gradient */}
+        <div className="bg-gradient-to-r from-violet-600 to-purple-700 px-5 py-4 flex items-center justify-between sticky top-0 z-10">
+          <div className="flex items-center gap-2">
+            <QrCode className="h-5 w-5 text-white" />
+            <h3 className="text-base font-bold text-white">Pembayaran QRIS</h3>
           </div>
-        )}
-
-        {/* Action buttons */}
-        <div className="space-y-2">
-          {(qrisStatus === "EXPIRED" || qrisStatus === "FAILED") && (
-            <button
-              onClick={handleRefreshQRIS}
-              disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 py-3 text-sm font-bold text-white shadow-lg shadow-violet-200/50 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Buat QR Baru
-            </button>
-          )}
           <button
             onClick={handleReset}
-            className="w-full rounded-xl bg-white border border-slate-200 py-3 text-sm font-semibold text-slate-500 transition-all hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
           >
-            Batalkan
+            <XCircle className="h-5 w-5" />
           </button>
         </div>
-      </div>
-    )
-  }
+
+        {/* Body */}
+        <div className="px-5 py-5 space-y-4">
+
+          {/* QR Code Area */}
+          <div className="flex flex-col items-center justify-center py-2">
+            {loading ? (
+              <div className="flex h-52 w-52 flex-col items-center justify-center rounded-2xl bg-violet-50 border-2 border-dashed border-violet-200">
+                <Loader2 className="h-10 w-10 text-violet-400 animate-spin" />
+                <p className="mt-3 text-xs text-violet-400 font-medium">Membuat QR Code...</p>
+              </div>
+            ) : qrisStatus === "EXPIRED" || qrisStatus === "FAILED" ? (
+              <div className="flex h-52 w-52 flex-col items-center justify-center rounded-2xl bg-red-50 border-2 border-dashed border-red-200">
+                <AlertCircle className="h-12 w-12 text-red-400" />
+                <p className="mt-3 text-sm font-bold text-red-500">
+                  {qrisStatus === "EXPIRED" ? "QR Code Kedaluwarsa" : "Pembayaran Gagal"}
+                </p>
+                <p className="mt-1 text-xs text-red-400">Buat QR baru untuk melanjutkan</p>
+              </div>
+            ) : qrDataUrl ? (
+              <div className="relative">
+                <div className="rounded-2xl overflow-hidden border-4 border-violet-100 shadow-xl shadow-violet-200/50 p-2.5 bg-white">
+                  <img
+                    src={qrDataUrl}
+                    alt="QRIS Payment QR Code"
+                    width={220}
+                    height={220}
+                    className="rounded-xl"
+                  />
+                </div>
+                <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 px-4 py-1.5 shadow-lg">
+                  <QrCode className="h-3.5 w-3.5 text-white" />
+                  <span className="text-xs font-bold text-white tracking-wide">QRIS</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-52 w-52 flex-col items-center justify-center rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200">
+                <QrCode className="h-14 w-14 text-slate-300" />
+                <p className="mt-2 text-xs text-slate-400">QR tidak tersedia</p>
+              </div>
+            )}
+          </div>
+
+          {/* Total + Countdown + Status */}
+          {!loading && qrisStatus === "PENDING" && (
+            <div className="space-y-2.5 mt-5">
+              {/* Total */}
+              <div className="rounded-2xl bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 px-4 py-3 text-center">
+                <p className="text-xs text-violet-500 font-semibold uppercase tracking-wide">Total Pembayaran</p>
+                <p className="text-2xl font-extrabold text-violet-700 mt-0.5">{formatPrice(total)}</p>
+              </div>
+
+              {/* Countdown */}
+              {qrisCountdown !== null && (
+                <div className={`flex items-center justify-between rounded-xl px-4 py-3 border transition-colors ${qrisCountdown <= 60
+                  ? "bg-red-50 border-red-200"
+                  : qrisCountdown <= 180
+                    ? "bg-amber-50 border-amber-200"
+                    : "bg-slate-50 border-slate-200"
+                  }`}>
+                  <div className="flex items-center gap-2">
+                    <Clock className={`h-4 w-4 ${qrisCountdown <= 60 ? "text-red-500 animate-pulse" :
+                      qrisCountdown <= 180 ? "text-amber-500" : "text-slate-400"
+                      }`} />
+                    <span className={`text-xs font-semibold ${qrisCountdown <= 60 ? "text-red-500" :
+                      qrisCountdown <= 180 ? "text-amber-600" : "text-slate-500"
+                      }`}>
+                      {qrisCountdown <= 60 ? "Segera kedaluwarsa!" : "Batas waktu scan"}
+                    </span>
+                  </div>
+                  <span className={`font-mono text-lg font-black tabular-nums ${qrisCountdown <= 60 ? "text-red-600" :
+                    qrisCountdown <= 180 ? "text-amber-600" : "text-slate-700"
+                    }`}>
+                    {formatCountdown(qrisCountdown)}
+                  </span>
+                </div>
+              )}
+
+              {/* Polling status */}
+              <div className="flex items-center justify-center gap-2 rounded-xl bg-slate-50 border border-slate-100 px-4 py-2">
+                <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <p className="text-xs text-slate-500">
+                  Menunggu pembayaran... {pollingCount > 0 ? `(cek ke-${pollingCount})` : ""}
+                </p>
+              </div>
+
+              <p className="text-center text-[11px] text-slate-400">
+                Scan dengan GoPay, OVO, Dana, ShopeePay, atau e-wallet lainnya
+              </p>
+            </div>
+          )}
+
+          {/* Midtrans Response Info Box */}
+          {!loading && qrisData && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 overflow-hidden">
+              <button
+                onClick={() => setShowMidtransInfo((v) => !v)}
+                className="flex w-full items-center justify-between px-4 py-2.5 text-xs font-semibold text-slate-500 hover:bg-slate-100 transition-colors"
+              >
+                <span className="flex items-center gap-1.5">
+                  <Info className="h-3.5 w-3.5" />
+                  Detail Respon Midtrans
+                </span>
+                {showMidtransInfo ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              </button>
+              {showMidtransInfo && (
+                <div className="border-t border-slate-200 px-4 py-3 bg-slate-100/50">
+                  <pre className="font-mono text-[10px] text-slate-600 whitespace-pre-wrap break-all max-h-48 overflow-y-auto w-full">
+                    {JSON.stringify(qrisData, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="space-y-2 pt-1">
+            {(qrisStatus === "EXPIRED" || qrisStatus === "FAILED") && (
+              <button
+                onClick={handleRefreshQRIS}
+                disabled={loading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 py-3 text-sm font-bold text-white shadow-lg shadow-violet-200/50 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Buat QR Baru
+              </button>
+            )}
+
+            {qrisStatus === "PENDING" && !showSuccess && (
+              <button
+                onClick={handleSnapPayment}
+                disabled={isSnapLoading || loading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-50 border border-indigo-200 py-3 text-sm font-bold text-indigo-600 shadow transition-all duration-200 hover:bg-indigo-100 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+              >
+                {isSnapLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                Bayar dengan Metode Lain
+              </button>
+            )}
+
+            <button
+              onClick={handleReset}
+              className="w-full rounded-xl bg-white border border-slate-200 py-2.5 text-sm font-semibold text-slate-500 transition-all hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+            >
+              Batalkan Pembayaran
+            </button>
+          </div>
+        </div>
+      </ScrollArea>
+    </div>,
+    document.body
+  ) : null
 
   // ===== Payment Method Selection =====
   return (
@@ -558,6 +752,9 @@ export function PaymentPanel({
       >
         Batalkan Transaksi
       </button>
+
+      {/* Render the QRIS portal modal if active */}
+      {qrisModal}
     </div>
   )
 }

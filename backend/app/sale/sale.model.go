@@ -61,3 +61,8 @@ type DailyReportResponse struct {
 	CashSales    int    `json:"cashSales"`
 	QRISSales    int    `json:"qrisSales"`
 }
+
+type SnapTokenResponse struct {
+	Token       string `json:"token"`
+	RedirectURL string `json:"redirectUrl"`
+}

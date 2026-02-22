@@ -243,6 +243,11 @@ export const salesApi = {
     return response.data.data
   },
 
+  generateSnapToken: async (id: string): Promise<{ token: string; redirectUrl: string }> => {
+    const response = await api.post(`/sales/${id}/snap`)
+    return response.data.data
+  },
+
   getQRISStatus: async (saleId: string): Promise<{ paymentId: string; saleId: string; status: string; transactionId: string }> => {
     const response = await api.get(`/sales/${saleId}/qris-status`)
     return response.data.data

@@ -3,7 +3,6 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/lib/store"
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/admin/AppSidebar"
 import { AdminHeader } from "@/components/admin/AdminHeader"
 
@@ -29,23 +28,21 @@ export default function AdminLayout({
 
   if (!user) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900" />
+      <div className="flex min-h-screen items-center justify-center bg-[#0f1117]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-white/10 border-t-indigo-500" />
       </div>
     )
   }
 
   return (
-    <SidebarProvider>
+    <div className="flex h-screen overflow-hidden bg-slate-50">
       <AppSidebar />
-      <SidebarInset>
+      <div className="flex flex-1 flex-col overflow-hidden">
         <AdminHeader />
-        <div className="flex-1 p-4 pt-0">
-          <div className="py-4">
-            {children}
-          </div>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+        <main className="flex-1 overflow-y-auto p-6">
+          {children}
+        </main>
+      </div>
+    </div>
   )
 }

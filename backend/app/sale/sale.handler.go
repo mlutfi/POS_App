@@ -1,6 +1,7 @@
 package sale
 
 import (
+	"fmt"
 	"pos_backend/helper"
 
 	"github.com/gofiber/fiber/v2"
@@ -13,6 +14,8 @@ type SaleHandler interface {
 	PayQRIS(ctx *fiber.Ctx) error
 	GetQRISStatus(ctx *fiber.Ctx) error
 	GetDailyReport(ctx *fiber.Ctx) error
+	MidtransNotification(ctx *fiber.Ctx) error
+	GenerateSnapToken(ctx *fiber.Ctx) error
 }
 
 type saleHandler struct {
@@ -85,4 +88,30 @@ func (h *saleHandler) GetDailyReport(ctx *fiber.Ctx) error {
 		return helper.InternalServerErrorResponse(ctx, err.Error())
 	}
 	return helper.SuccessResponse(ctx, report)
+}
+
+func (h *saleHandler) MidtransNotification(ctx *fiber.Ctx) error {
+	var payload map[string]interface{}
+	if err := ctx.BodyParser(&payload); err != nil {
+		return helper.BadRequestResponse(ctx, "Invalid notification payload")
+	}
+
+	err := h.UseCase.MidtransNotification(ctx.Context(), payload)
+	if err != nil {
+		// Midtrans expects 200 OK even if we fail to process, to stop retrying.
+		// However, logging the error is good practice.
+		fmt.Printf("Midtrans notification error: %v\n", err)
+		return ctx.SendStatus(fiber.StatusOK)
+	}
+
+	return ctx.SendStatus(fiber.StatusOK)
+}
+
+func (h *saleHandler) GenerateSnapToken(ctx *fiber.Ctx) error {
+	id := ctx.Params("id")
+	tokenResp, err := h.UseCase.GenerateSnapToken(ctx.Context(), id)
+	if err != nil {
+		return helper.BadRequestResponse(ctx, err.Error())
+	}
+	return helper.SuccessResponse(ctx, tokenResp)
 }
