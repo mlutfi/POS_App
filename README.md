@@ -72,7 +72,13 @@ cp .env.example .env
 go mod download
 ```
 
-5. Run the server:
+5. Run database migrations and seed default owner:
+```bash
+go run cmd/migrate/main.go
+```
+*Note: This will automatically create an owner account (`admin@admin.com` / `admin123`) if no owner exists.*
+
+6. Run the server:
 ```bash
 go run main.go
 ```
