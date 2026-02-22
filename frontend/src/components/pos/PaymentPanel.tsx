@@ -478,71 +478,82 @@ export function PaymentPanel({
   // ===== Cash Payment Flow =====
   if (paymentMethod === "cash") {
     return (
-      <div className="space-y-4 animate-fade-in">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-slate-700">Pembayaran Tunai</h3>
+      <ScrollArea className="max-h-[70vh]">
+        <div className="space-y-4 animate-fade-in pr-1">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-700">Pembayaran Tunai</h3>
+            <button
+              onClick={() => setPaymentMethod(null)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 border border-slate-200 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-600"
+            >
+              <XCircle className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Jumlah Bayar
+            </label>
+            <input
+              type="number"
+              value={cashAmount}
+              onChange={(e) => setCashAmount(e.target.value)}
+              placeholder="Masukkan jumlah"
+              className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4 py-3.5 text-sm text-slate-700 placeholder-slate-300 outline-none transition-all duration-200 focus:border-orange-400 focus:bg-white focus:ring-2 focus:ring-orange-100"
+            />
+          </div>
+
+          {/* Quick amounts — row 1: exact total */}
+          <div>
+            <p className="mb-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Nominal Cepat</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setCashAmount(total.toString())}
+                className="rounded-full bg-orange-50 border border-orange-200 px-3 py-1.5 text-xs font-semibold text-orange-600 transition-all hover:bg-orange-100 active:scale-95"
+              >
+                Pas · {formatPrice(total)}
+              </button>
+              {[10000, 20000, 50000, 100000].map((amount) => (
+                <button
+                  key={amount}
+                  onClick={() => setCashAmount(amount.toString())}
+                  className="rounded-full bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-500 transition-all hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 active:scale-95"
+                >
+                  {formatPrice(amount)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {parseInt(cashAmount) >= total && (
+            <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 animate-fade-in">
+              <p className="text-xs text-emerald-500 font-medium">Kembalian</p>
+              <p className="text-sm font-bold text-emerald-700">
+                {formatPrice(change)}
+              </p>
+            </div>
+          )}
+
           <button
-            onClick={() => setPaymentMethod(null)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 border border-slate-200 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-600"
+            onClick={handleCashPayment}
+            disabled={loading || parseInt(cashAmount) < total}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-200/50 transition-all duration-200 hover:shadow-xl hover:shadow-orange-200/60 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:shadow-none disabled:hover:scale-100"
           >
-            <XCircle className="h-4 w-4" />
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Memproses...
+              </>
+            ) : (
+              <>
+                <Banknote className="h-4 w-4" />
+                Bayar Sekarang
+                <ArrowRight className="h-4 w-4" />
+              </>
+            )}
           </button>
         </div>
-
-        <div>
-          <label className="mb-2 block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            Jumlah Bayar
-          </label>
-          <input
-            type="number"
-            value={cashAmount}
-            onChange={(e) => setCashAmount(e.target.value)}
-            placeholder="Masukkan jumlah"
-            className="w-full rounded-xl bg-slate-50 border border-slate-200 px-4 py-3.5 text-sm text-slate-700 placeholder-slate-300 outline-none transition-all duration-200 focus:border-amber-400 focus:bg-white focus:ring-2 focus:ring-amber-100"
-          />
-        </div>
-
-        {/* Quick amounts */}
-        <div className="flex flex-wrap gap-2">
-          {[total, total + 10000, total + 20000, total + 50000, 100000, 150000].map((amount) => (
-            <button
-              key={amount}
-              onClick={() => setCashAmount(amount.toString())}
-              className="rounded-full bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-500 transition-all hover:bg-amber-50 hover:text-amber-700 hover:border-amber-200 active:scale-95"
-            >
-              {formatPrice(amount)}
-            </button>
-          ))}
-        </div>
-
-        {parseInt(cashAmount) >= total && (
-          <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 animate-fade-in">
-            <p className="text-xs text-emerald-500 font-medium">Kembalian</p>
-            <p className="text-sm font-bold text-emerald-700">
-              {formatPrice(change)}
-            </p>
-          </div>
-        )}
-
-        <button
-          onClick={handleCashPayment}
-          disabled={loading || parseInt(cashAmount) < total}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-200/50 transition-all duration-200 hover:shadow-xl hover:shadow-emerald-200/60 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:shadow-none disabled:hover:scale-100"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Memproses...
-            </>
-          ) : (
-            <>
-              <Banknote className="h-4 w-4" />
-              Bayar Sekarang
-              <ArrowRight className="h-4 w-4" />
-            </>
-          )}
-        </button>
-      </div>
+      </ScrollArea>
     )
   }
 
@@ -728,16 +739,16 @@ export function PaymentPanel({
       <div className="grid grid-cols-2 gap-3">
         <button
           onClick={() => handleStartPayment("cash")}
-          className="group flex flex-col items-center justify-center gap-3 rounded-2xl bg-white border border-slate-100 py-5 transition-all duration-200 hover:bg-gradient-to-br hover:from-amber-50 hover:to-orange-50 hover:border-amber-200 hover:shadow-lg hover:shadow-amber-100/40 hover:scale-[1.02] active:scale-[0.98]"
+          className="group flex flex-col items-center justify-center gap-3 rounded-2xl bg-white border border-slate-100 py-5 transition-all duration-200 hover:bg-orange-50 hover:border-orange-200 hover:shadow-lg hover:shadow-orange-100/40 hover:scale-[1.02] active:scale-[0.98]"
         >
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-200/40 transition-transform group-hover:scale-110">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 shadow-lg shadow-orange-200/40 transition-transform group-hover:scale-110">
             <Banknote className="h-6 w-6 text-white" />
           </div>
-          <span className="text-sm font-bold text-slate-600 group-hover:text-amber-700">Tunai</span>
+          <span className="text-sm font-bold text-slate-600 group-hover:text-orange-700">Tunai</span>
         </button>
         <button
           onClick={() => handleStartPayment("qris")}
-          className="group flex flex-col items-center justify-center gap-3 rounded-2xl bg-white border border-slate-100 py-5 transition-all duration-200 hover:bg-gradient-to-br hover:from-violet-50 hover:to-purple-50 hover:border-violet-200 hover:shadow-lg hover:shadow-violet-100/40 hover:scale-[1.02] active:scale-[0.98]"
+          className="group flex flex-col items-center justify-center gap-3 rounded-2xl bg-white border border-slate-100 py-5 transition-all duration-200 hover:bg-violet-50 hover:border-violet-200 hover:shadow-lg hover:shadow-violet-100/40 hover:scale-[1.02] active:scale-[0.98]"
         >
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-400 to-purple-500 shadow-lg shadow-violet-200/40 transition-transform group-hover:scale-110">
             <QrCode className="h-6 w-6 text-white" />
