@@ -133,7 +133,7 @@ export function AppSidebar() {
             )}>
                 {!collapsed && (
                     <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-200/60 shrink-0">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 shadow-lg shadow-indigo-200/60 shrink-0">
                             <Sparkles className="h-[18px] w-[18px] text-white" />
                         </div>
                         <div className="min-w-0">
@@ -144,7 +144,7 @@ export function AppSidebar() {
                 )}
 
                 {collapsed && (
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-200/60">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 shadow-lg shadow-indigo-200/60">
                         <Sparkles className="h-[18px] w-[18px] text-white" />
                     </div>
                 )}
@@ -241,7 +241,7 @@ export function AppSidebar() {
                     onClick={() => router.push("/pos")}
                     title={collapsed ? "Buka POS" : undefined}
                     className={cn(
-                        "flex w-full items-center rounded-xl border border-indigo-100 bg-indigo-50 text-sm font-medium text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:border-indigo-200",
+                        "flex w-full items-center rounded-xl bg-orange-50 text-orange-700 border border-orange-100 text-sm font-medium transition-all duration-200 hover:bg-orange-100 hover:border-orange-200",
                         collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5"
                     )}
                 >
@@ -263,7 +263,7 @@ export function AppSidebar() {
                 {collapsed ? (
                     <div className="flex flex-col items-center gap-2">
                         <Avatar className="h-9 w-9">
-                            <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs font-bold">
+                            <AvatarFallback className="bg-gradient-to-br from-orange-400 to-amber-500 text-white text-xs font-bold">
                                 {initials(user?.name)}
                             </AvatarFallback>
                         </Avatar>
@@ -278,7 +278,7 @@ export function AppSidebar() {
                 ) : (
                     <div className="flex items-center gap-3 rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5">
                         <Avatar className="h-8 w-8 shrink-0">
-                            <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs font-bold">
+                            <AvatarFallback className="bg-gradient-to-br from-orange-400 to-amber-500 text-white text-xs font-bold">
                                 {initials(user?.name)}
                             </AvatarFallback>
                         </Avatar>

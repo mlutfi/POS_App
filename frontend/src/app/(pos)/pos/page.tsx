@@ -74,8 +74,8 @@ export default function PosPage() {
             <div className="shrink-0 px-5 pt-4 pb-3 border-b border-slate-100">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-50">
-                    <Package className="h-4 w-4 text-indigo-500" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-50">
+                    <Package className="h-4 w-4 text-orange-500" />
                   </div>
                   <div>
                     <h2 className="text-sm font-bold text-slate-800">Katalog Produk</h2>
@@ -161,7 +161,7 @@ export default function PosPage() {
       {!mobileCartOpen && (
         <button
           onClick={() => setMobileCartOpen(true)}
-          className="fixed bottom-6 right-4 z-40 lg:hidden flex items-center gap-3 rounded-2xl bg-indigo-600 px-4 py-3 shadow-xl shadow-indigo-200/60 transition-all hover:bg-indigo-700 active:scale-95"
+          className="fixed bottom-20 lg:bottom-6 right-4 z-40 lg:hidden flex items-center gap-3 rounded-2xl bg-indigo-600 px-4 py-3 shadow-xl shadow-indigo-200/60 transition-all hover:bg-indigo-700 active:scale-95"
         >
           <div className="relative">
             <ShoppingCart className="h-5 w-5 text-white" />

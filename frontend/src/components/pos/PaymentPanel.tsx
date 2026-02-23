@@ -513,14 +513,16 @@ export function PaymentPanel({
               >
                 Pas · {formatPrice(total)}
               </button>
-              {[10000, 20000, 50000, 100000].map((amount) => (
-                <button
-                  key={amount}
-                  onClick={() => setCashAmount(amount.toString())}
-                  className="rounded-full bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-500 transition-all hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 active:scale-95"
-                >
-                  {formatPrice(amount)}
-                </button>
+              {[5000, 10000, 20000, 50000, 100000].map((amount) => (
+                amount > total && (
+                  <button
+                    key={amount}
+                    onClick={() => setCashAmount(amount.toString())}
+                    className="rounded-full bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-500 transition-all hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 active:scale-95"
+                  >
+                    {formatPrice(amount)}
+                  </button>
+                )
               ))}
             </div>
           </div>
