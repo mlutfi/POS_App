@@ -59,40 +59,8 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-white px-4 py-8 text-slate-900 md:px-10">
-      <div className="mx-auto grid w-full max-w-6xl items-center justify-center overflow-hidden rounded-[28px] border border-slate-200 bg-white text-center shadow-[0_24px_60px_-40px_rgba(15,23,42,0.35)] md:grid-cols-[1.05fr_0.95fr]">
-        {/* Left Section - Branding */}
-        <section className="flex flex-col items-center justify-between gap-10 bg-[#0e0a07] p-8 text-white md:p-12">
-          <div>
-            <h1 className="mx-auto max-w-sm text-3xl font-semibold leading-tight md:text-4xl">
-              Kelola penjualan dengan lebih mudah.
-            </h1>
-            <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-slate-200">
-              Sistem Point of Sales yang membantu Anda mengelola transaksi,
-              inventori, dan laporan penjualan dalam satu platform.
-            </p>
-          </div>
-
-          <div className="relative flex w-full max-w-md aspect-[4/3] items-center justify-center rounded-2xl border-[3px] border-white bg-[#15110e]">
-            <div className="flex h-32 w-32 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-600">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                className="h-16 w-16 text-white"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"
-                />
-              </svg>
-            </div>
-          </div>
-        </section>
-
-        {/* Right Section - Login Form */}
-        <section className="flex flex-col items-center justify-center gap-6 p-8 md:p-12">
+      <div className="mx-auto grid w-full max-w-6xl items-center justify-center overflow-hidden">
+        <section className="flex flex-col w-[500px] items-center justify-center gap-6 p-8 md:p-12 rounded-[28px] border border-slate-200 bg-white text-center shadow-[0_24px_60px_-40px_rgba(15,23,42,0.35)]">
           <div className="flex items-center justify-center gap-2 text-sm font-semibold text-slate-900">
             <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-gradient-to-br from-amber-500 to-orange-600">
               <svg
@@ -113,7 +81,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold">Selamat Datang Kembali</h2>
+            <h2 className="text-2xl font-semibold">Selamat Datang</h2>
             <p className="mt-1 text-sm text-slate-500">
               Silakan login ke sistem POS Anda
             </p>
