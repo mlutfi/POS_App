@@ -16,6 +16,7 @@ import {
     Sparkles,
     PanelLeftClose,
     PanelLeftOpen,
+    LayoutGrid,
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -132,20 +133,20 @@ export function AppSidebar() {
                 collapsed ? "justify-center px-0" : "justify-between px-4"
             )}>
                 {!collapsed && (
-                    <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 shadow-lg shadow-indigo-200/60 shrink-0">
-                            <Sparkles className="h-[18px] w-[18px] text-white" />
+                    <div className="flex items-center gap-3">
+                        <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-200/50">
+                            <LayoutGrid className="h-5 w-5 text-white" />
                         </div>
-                        <div className="min-w-0">
-                            <p className="text-sm font-bold text-slate-800 leading-tight truncate">POS Admin</p>
-                            <p className="text-[10px] text-slate-400 leading-tight mt-0.5">Management Panel</p>
+                        <div>
+                            <span className="text-lg font-bold text-slate-800">POS Admin</span>
+                            <p className="text-[10px] text-slate-400 font-medium tracking-wider uppercase">Management Panel</p>
                         </div>
                     </div>
                 )}
 
                 {collapsed && (
                     <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 shadow-lg shadow-indigo-200/60">
-                        <Sparkles className="h-[18px] w-[18px] text-white" />
+                        <LayoutGrid className="h-[18px] w-[18px] text-white" />
                     </div>
                 )}
 
@@ -161,15 +162,17 @@ export function AppSidebar() {
             </div>
 
             {/* Expand button when collapsed */}
-            {collapsed && (
-                <button
-                    onClick={() => setCollapsed(false)}
-                    title="Expand sidebar"
-                    className="mx-auto mt-3 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-all hover:bg-slate-100 hover:text-indigo-500"
-                >
-                    <PanelLeftOpen className="h-4 w-4" />
-                </button>
-            )}
+            {
+                collapsed && (
+                    <button
+                        onClick={() => setCollapsed(false)}
+                        title="Expand sidebar"
+                        className="mx-auto mt-3 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-all hover:bg-slate-100 hover:text-indigo-500"
+                    >
+                        <PanelLeftOpen className="h-4 w-4" />
+                    </button>
+                )
+            }
 
             {/* ── Navigation ── */}
             <nav className={cn("flex-1 overflow-y-auto py-4 space-y-1", collapsed ? "px-2" : "px-3")}>
@@ -300,6 +303,6 @@ export function AppSidebar() {
                     </div>
                 )}
             </div>
-        </aside>
+        </aside >
     )
 }
